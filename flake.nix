@@ -33,7 +33,8 @@
               mkdir -p $out/bin
               makeWrapper ${entrypoint} $out/bin/pr-dashboard \
                 --add-flags "${pkgs.bun}/bin/bun run $out/share/pr-dashboard/server.ts" \
-                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.gh ]}
+                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.gh ]} \
+                --set-default OPENCODE_URL "http://mentat:9741"
             '';
           };
         }

@@ -65,6 +65,34 @@
     .status-open { color: #3fb950; }
     .status-draft { color: #8b949e; }
 
+    /* Sessions */
+    .sessions-cell { position: relative; }
+    .session-badge {
+      background: #1f6feb; color: #fff; border-radius: 10px;
+      padding: 0.15rem 0.5rem; font-size: 0.75rem; cursor: pointer;
+      display: inline-block;
+    }
+    .session-badge-zero { background: #21262d; color: #484f58; cursor: default; }
+    .session-list {
+      display: none; position: absolute; z-index: 10;
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      padding: 0.5rem; min-width: 320px; top: 100%; left: 0;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .sessions-cell:hover .session-list { display: block; }
+    .session-item { padding: 0.35rem 0; border-bottom: 1px solid #21262d; display: flex; align-items: baseline; gap: 0.5rem; }
+    .session-item:last-child { border-bottom: none; }
+    .session-item a { font-size: 0.8rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .session-meta { font-size: 0.7rem; color: #8b949e; white-space: nowrap; }
+    .session-children { color: #8b949e; font-size: 0.7rem; }
+    .sessions-none { color: #484f58; font-size: 0.8rem; }
+    .copy-btn {
+      background: none; border: none; color: #8b949e; cursor: pointer;
+      font-size: 0.7rem; padding: 0 0.2rem; flex-shrink: 0;
+    }
+    .copy-btn:hover { color: #c9d1d9; }
+    .copy-btn.copied { color: #3fb950; }
+
     /* Loading / error */
     .loading { display: flex; align-items: center; gap: 0.75rem; padding: 2rem 0; color: #8b949e; font-size: 0.9rem; }
     .error { color: #f85149; padding: 1rem 0; }
@@ -175,6 +203,36 @@
       return '<a class="jira" href="' + JIRA_BASE + '/' + ticket + '" target="_blank">' + ticket + '</a>';
     }
 
+    function escapeHtml(s) {
+      var d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function truncate(s, n) {
+      return s.length > n ? s.slice(0, n) + "..." : s;
+    }
+
+    function sessionsCell(sessions) {
+      if (!sessions || !sessions.length) {
+        return '<span class="sessions-none">--</span>';
+      }
+      var badge = '<span class="session-badge">' + sessions.length + '</span>';
+      var items = sessions.slice(0, 8).map(function(s) {
+        var ago = timeAgo(new Date(s.time.updated).toISOString());
+        var children = s.childCount > 0 ? ' <span class="session-children">(' + s.childCount + ' sub)</span>' : '';
+        return '<div class="session-item">' +
+          '<a href="' + escapeHtml(s.url) + '" target="_blank" title="' + escapeHtml(s.title) + '">' +
+            escapeHtml(truncate(s.title, 45)) +
+          '</a>' +
+          '<span class="session-meta">' + ago + children + '</span>' +
+          '<button class="copy-btn" data-url="' + escapeHtml(s.url) + '" title="Copy URL">copy</button>' +
+        '</div>';
+      }).join('');
+      var more = sessions.length > 8 ? '<div class="session-meta" style="padding:0.3rem 0">+' + (sessions.length - 8) + ' more</div>' : '';
+      return '<div class="sessions-cell">' + badge + '<div class="session-list">' + items + more + '</div></div>';
+    }
+
     // --- Rendering ---
 
     function renderTable(prs) {
@@ -182,7 +240,7 @@
         content.innerHTML = '<p class="count">No PRs match filters</p>';
         return;
       }
-      var head = '<thead><tr><th>#</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Conflicts</th><th>Status</th><th>Updated</th></tr></thead>';
+      var head = '<thead><tr><th>#</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Conflicts</th><th>Sessions</th><th>Status</th><th>Updated</th></tr></thead>';
       var rows = prs.map(function(pr) {
         return '<tr>' +
           '<td><a href="' + pr.url + '" target="_blank">#' + pr.number + '</a></td>' +
@@ -191,6 +249,7 @@
           '<td>' + jiraCell(pr.jiraTicket) + '</td>' +
           '<td>' + checksLabel(pr.checks) + '</td>' +
           '<td>' + mergeableLabel(pr.mergeable) + '</td>' +
+          '<td>' + sessionsCell(pr.sessions) + '</td>' +
           '<td>' + statusLabel(pr.isDraft) + '</td>' +
           '<td class="date">' + timeAgo(pr.updatedAt) + '</td>' +
           '</tr>';
@@ -238,6 +297,20 @@
     }
 
     // --- Events ---
+
+    document.addEventListener("click", function(e) {
+      var btn = e.target.closest(".copy-btn");
+      if (!btn) return;
+      e.preventDefault();
+      var url = btn.getAttribute("data-url");
+      if (url) {
+        navigator.clipboard.writeText(url).then(function() {
+          btn.textContent = "copied";
+          btn.classList.add("copied");
+          setTimeout(function() { btn.textContent = "copy"; btn.classList.remove("copied"); }, 1500);
+        });
+      }
+    });
 
     refreshBtn.addEventListener("click", manualRefresh);
 
