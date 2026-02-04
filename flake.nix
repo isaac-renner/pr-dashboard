@@ -17,16 +17,15 @@
             pname = "pr-dashboard";
             version = "0.1.0";
             src = ./.;
+            nativeBuildInputs = [ pkgs.makeWrapper ];
             installPhase = ''
               mkdir -p $out/share/pr-dashboard
               cp server.ts index.html $out/share/pr-dashboard/
 
               mkdir -p $out/bin
-              cat > $out/bin/pr-dashboard <<WRAPPER
-              #!${pkgs.bash}/bin/bash
-              exec ${pkgs.bun}/bin/bun run $out/share/pr-dashboard/server.ts "\$@"
-              WRAPPER
-              chmod +x $out/bin/pr-dashboard
+              makeWrapper ${pkgs.bun}/bin/bun $out/bin/pr-dashboard \
+                --add-flags "run $out/share/pr-dashboard/server.ts" \
+                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.gh ]}
             '';
           };
         }
