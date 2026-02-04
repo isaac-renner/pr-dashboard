@@ -233,6 +233,28 @@
       return '<div class="sessions-cell">' + badge + '<div class="session-list">' + items + more + '</div></div>';
     }
 
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function(resolve, reject) {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "absolute";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          ok ? resolve() : reject(new Error("copy failed"));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
     // --- Rendering ---
 
     function renderTable(prs) {
@@ -304,10 +326,13 @@
       e.preventDefault();
       var url = btn.getAttribute("data-url");
       if (url) {
-        navigator.clipboard.writeText(url).then(function() {
+        copyToClipboard(url).then(function() {
           btn.textContent = "copied";
           btn.classList.add("copied");
           setTimeout(function() { btn.textContent = "copy"; btn.classList.remove("copied"); }, 1500);
+        }).catch(function() {
+          btn.textContent = "failed";
+          setTimeout(function() { btn.textContent = "copy"; }, 1500);
         });
       }
     });
