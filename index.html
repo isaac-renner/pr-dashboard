@@ -240,16 +240,16 @@
         content.innerHTML = '<p class="count">No PRs match filters</p>';
         return;
       }
-      var head = '<thead><tr><th>#</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Conflicts</th><th>Sessions</th><th>Status</th><th>Updated</th></tr></thead>';
+      var head = '<thead><tr><th>#</th><th>Sessions</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Conflicts</th><th>Status</th><th>Updated</th></tr></thead>';
       var rows = prs.map(function(pr) {
         return '<tr>' +
           '<td><a href="' + pr.url + '" target="_blank">#' + pr.number + '</a></td>' +
+          '<td>' + sessionsCell(pr.sessions) + '</td>' +
           '<td class="repo">' + pr.repository.name + '</td>' +
           '<td>' + pr.title + '</td>' +
           '<td>' + jiraCell(pr.jiraTicket) + '</td>' +
           '<td>' + checksLabel(pr.checks) + '</td>' +
           '<td>' + mergeableLabel(pr.mergeable) + '</td>' +
-          '<td>' + sessionsCell(pr.sessions) + '</td>' +
           '<td>' + statusLabel(pr.isDraft) + '</td>' +
           '<td class="date">' + timeAgo(pr.updatedAt) + '</td>' +
           '</tr>';
