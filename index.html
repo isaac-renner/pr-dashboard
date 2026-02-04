@@ -57,6 +57,10 @@
     .checks-failure { color: #f85149; }
     .checks-pending { color: #d29922; }
     .checks-none { color: #484f58; }
+    .mergeable { font-size: 0.8rem; white-space: nowrap; }
+    .mergeable-clean { color: #3fb950; }
+    .mergeable-conflict { color: #f85149; }
+    .mergeable-unknown { color: #8b949e; }
     .status { font-size: 0.8rem; white-space: nowrap; }
     .status-open { color: #3fb950; }
     .status-draft { color: #8b949e; }
@@ -156,6 +160,16 @@
         : '<span class="status status-open">Open</span>';
     }
 
+    function mergeableLabel(state) {
+      if (state === "CONFLICTING") {
+        return '<span class="mergeable mergeable-conflict">Yes</span>';
+      }
+      if (state === "MERGEABLE") {
+        return '<span class="mergeable mergeable-clean">No</span>';
+      }
+      return '<span class="mergeable mergeable-unknown">Unknown</span>';
+    }
+
     function jiraCell(ticket) {
       if (!ticket) return "";
       return '<a class="jira" href="' + JIRA_BASE + '/' + ticket + '" target="_blank">' + ticket + '</a>';
@@ -168,7 +182,7 @@
         content.innerHTML = '<p class="count">No PRs match filters</p>';
         return;
       }
-      var head = '<thead><tr><th>#</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Status</th><th>Updated</th></tr></thead>';
+      var head = '<thead><tr><th>#</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Conflicts</th><th>Status</th><th>Updated</th></tr></thead>';
       var rows = prs.map(function(pr) {
         return '<tr>' +
           '<td><a href="' + pr.url + '" target="_blank">#' + pr.number + '</a></td>' +
@@ -176,6 +190,7 @@
           '<td>' + pr.title + '</td>' +
           '<td>' + jiraCell(pr.jiraTicket) + '</td>' +
           '<td>' + checksLabel(pr.checks) + '</td>' +
+          '<td>' + mergeableLabel(pr.mergeable) + '</td>' +
           '<td>' + statusLabel(pr.isDraft) + '</td>' +
           '<td class="date">' + timeAgo(pr.updatedAt) + '</td>' +
           '</tr>';

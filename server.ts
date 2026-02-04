@@ -13,16 +13,17 @@ interface PR {
   headRefName: string;
   repository: { name: string; nameWithOwner: string };
   checks: string | null;
+  mergeable: string | null;
   jiraTicket: string | null;
 }
 
 // --- GitHub GraphQL ---
 
 const GQL_QUERY = `{
-  search(query: "author:@me state:open type:pr", type: ISSUE, first: 100) {
+  search(query: "(author:@me OR assignee:@me) state:open type:pr", type: ISSUE, first: 100) {
     nodes {
       ... on PullRequest {
-        number title url isDraft createdAt updatedAt headRefName
+        number title url isDraft createdAt updatedAt headRefName mergeable
         repository { name nameWithOwner }
         commits(last: 1) {
           nodes { commit { statusCheckRollup { state } } }
@@ -40,6 +41,7 @@ interface GQLNode {
   createdAt: string;
   updatedAt: string;
   headRefName: string;
+  mergeable: string | null;
   repository: { name: string; nameWithOwner: string };
   commits: {
     nodes: Array<{
@@ -64,6 +66,7 @@ function topr(n: GQLNode): PR {
     headRefName: n.headRefName,
     repository: n.repository,
     checks: n.commits.nodes[0]?.commit?.statusCheckRollup?.state ?? null,
+    mergeable: n.mergeable,
     jiraTicket: parseJiraTicket(n.title, n.headRefName),
   };
 }
