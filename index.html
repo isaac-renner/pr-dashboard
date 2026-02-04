@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PR Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117; color: #c9d1d9; padding: 2rem;
+    }
+
+    /* Layout */
+    .header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.4rem; color: #f0f6fc; }
+    .count { font-size: 0.85rem; color: #8b949e; margin-bottom: 0.75rem; }
+
+    /* Refresh bar */
+    .refresh-bar { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: #8b949e; }
+    .refresh-bar button {
+      background: #21262d; color: #c9d1d9; border: 1px solid #30363d;
+      padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    }
+    .refresh-bar button:hover { background: #30363d; }
+    .refresh-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .refreshing { color: #58a6ff; }
+
+    /* Filters */
+    .filters { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .filters label { font-size: 0.8rem; color: #8b949e; display: flex; flex-direction: column; gap: 0.25rem; }
+    .filters input, .filters select {
+      background: #161b22; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem;
+    }
+    .filters button {
+      background: #238636; color: #fff; border: none;
+      padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer;
+      font-size: 0.85rem; align-self: flex-end;
+    }
+    .filters button:hover { background: #2ea043; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 0.75rem; color: #8b949e; padding: 0.5rem 0.75rem; border-bottom: 1px solid #21262d; }
+    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #21262d; font-size: 0.85rem; }
+    tr:hover { background: #161b22; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Cell styles */
+    .repo { color: #8b949e; }
+    .date { color: #8b949e; white-space: nowrap; }
+    .jira a { color: #d2a8ff; font-size: 0.75rem; }
+    .checks { font-size: 0.8rem; white-space: nowrap; }
+    .checks-success { color: #3fb950; }
+    .checks-failure { color: #f85149; }
+    .checks-pending { color: #d29922; }
+    .checks-none { color: #484f58; }
+    .status { font-size: 0.8rem; white-space: nowrap; }
+    .status-open { color: #3fb950; }
+    .status-draft { color: #8b949e; }
+
+    /* Loading / error */
+    .loading { display: flex; align-items: center; gap: 0.75rem; padding: 2rem 0; color: #8b949e; font-size: 0.9rem; }
+    .error { color: #f85149; padding: 1rem 0; }
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid #30363d; border-top-color: #58a6ff;
+      border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block;
+    }
+    .spinner-sm { width: 12px; height: 12px; border-width: 1.5px; vertical-align: middle; margin-right: 4px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>PR Dashboard</h1>
+    <div class="refresh-bar">
+      <span id="refresh-status">Loading...</span>
+      <button id="refresh-btn" disabled>Refresh</button>
+    </div>
+  </div>
+
+  <form class="filters" id="filters">
+    <label>Exclude keywords (comma-separated)
+      <input type="text" name="exclude" placeholder="endpoint audit, loki" /></label>
+    <label>Filter by repo
+      <input type="text" name="repo" placeholder="e.g. frontend" /></label>
+    <label>Drafts
+      <select name="drafts">
+        <option value="exclude">Exclude drafts</option>
+        <option value="include">Include drafts</option>
+      </select></label>
+    <label>Org
+      <select name="org">
+        <option value="ailohq">ailohq only</option>
+        <option value="all">All orgs</option>
+      </select></label>
+    <button type="submit">Apply</button>
+  </form>
+
+  <div id="content">
+    <div class="loading"><div class="spinner"></div>Loading...</div>
+  </div>
+
+  <script>
+    var JIRA_BASE = "https://ailohq.atlassian.net/browse";
+    var $ = document.getElementById.bind(document);
+    var content = $("content");
+    var form = $("filters");
+    var refreshStatus = $("refresh-status");
+    var refreshBtn = $("refresh-btn");
+    var lastRefreshed = null;
+
+    // Hydrate form inputs from URL query params on load
+    (function hydrateForm() {
+      var params = new URLSearchParams(location.search);
+      params.forEach(function(value, key) {
+        var el = form.elements[key];
+        if (el) el.value = value;
+      });
+    })();
+
+    // --- Helpers ---
+
+    function timeAgo(iso) {
+      var secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (secs < 5) return "just now";
+      if (secs < 60) return secs + "s ago";
+      var mins = Math.floor(secs / 60);
+      if (mins < 60) return mins + "m ago";
+      var hours = Math.floor(mins / 60);
+      if (hours < 24) return hours + "h ago";
+      var days = Math.floor(hours / 24);
+      if (days < 30) return days + "d ago";
+      return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+    }
+
+    var CHECKS_MAP = {
+      SUCCESS:  { cls: "checks-success", label: "Passing" },
+      FAILURE:  { cls: "checks-failure", label: "Failing" },
+      PENDING:  { cls: "checks-pending", label: "Pending" },
+      ERROR:    { cls: "checks-failure", label: "Error" },
+      EXPECTED: { cls: "checks-pending", label: "Expected" },
+    };
+
+    function checksLabel(state) {
+      if (!state) return '<span class="checks checks-none">--</span>';
+      var m = CHECKS_MAP[state] || { cls: "checks-none", label: state };
+      return '<span class="checks ' + m.cls + '">' + m.label + '</span>';
+    }
+
+    function statusLabel(isDraft) {
+      return isDraft
+        ? '<span class="status status-draft">Draft</span>'
+        : '<span class="status status-open">Open</span>';
+    }
+
+    function jiraCell(ticket) {
+      if (!ticket) return "";
+      return '<a class="jira" href="' + JIRA_BASE + '/' + ticket + '" target="_blank">' + ticket + '</a>';
+    }
+
+    // --- Rendering ---
+
+    function renderTable(prs) {
+      if (!prs.length) {
+        content.innerHTML = '<p class="count">No PRs match filters</p>';
+        return;
+      }
+      var head = '<thead><tr><th>#</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Status</th><th>Updated</th></tr></thead>';
+      var rows = prs.map(function(pr) {
+        return '<tr>' +
+          '<td><a href="' + pr.url + '" target="_blank">#' + pr.number + '</a></td>' +
+          '<td class="repo">' + pr.repository.name + '</td>' +
+          '<td>' + pr.title + '</td>' +
+          '<td>' + jiraCell(pr.jiraTicket) + '</td>' +
+          '<td>' + checksLabel(pr.checks) + '</td>' +
+          '<td>' + statusLabel(pr.isDraft) + '</td>' +
+          '<td class="date">' + timeAgo(pr.updatedAt) + '</td>' +
+          '</tr>';
+      }).join("");
+      content.innerHTML =
+        '<p class="count">' + prs.length + ' PR' + (prs.length === 1 ? '' : 's') + '</p>' +
+        '<table>' + head + '<tbody>' + rows + '</tbody></table>';
+    }
+
+    // --- Refresh status ---
+
+    function updateRefreshLabel() {
+      if (!lastRefreshed) return;
+      refreshStatus.textContent = "Last refreshed " + timeAgo(lastRefreshed);
+      refreshBtn.disabled = false;
+    }
+    setInterval(updateRefreshLabel, 10000);
+
+    // --- Data fetching ---
+
+    async function load() {
+      try {
+        var params = new URLSearchParams(new FormData(form));
+        var res = await fetch("/api/prs?" + params.toString());
+        if (!res.ok) throw new Error(await res.text());
+        var data = await res.json();
+        lastRefreshed = data.lastRefreshed;
+        updateRefreshLabel();
+        renderTable(data.prs);
+      } catch (e) {
+        content.innerHTML = '<p class="error">Error: ' + e.message + '</p>';
+      }
+    }
+
+    async function manualRefresh() {
+      refreshBtn.disabled = true;
+      refreshStatus.innerHTML = '<span class="refreshing"><span class="spinner spinner-sm"></span>Refreshing...</span>';
+      try {
+        await fetch("/api/refresh", { method: "POST" });
+        await load();
+      } catch (e) {
+        refreshStatus.textContent = "Refresh failed";
+        refreshBtn.disabled = false;
+      }
+    }
+
+    // --- Events ---
+
+    refreshBtn.addEventListener("click", manualRefresh);
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      var params = new URLSearchParams(new FormData(form));
+      history.replaceState(null, "", "?" + params.toString());
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>
