@@ -18,13 +18,21 @@
             version = "0.1.0";
             src = ./.;
             nativeBuildInputs = [ pkgs.makeWrapper ];
-            installPhase = ''
+            installPhase = let
+              entrypoint = pkgs.writeShellScript "pr-dashboard-entrypoint" ''
+                # Load GH_TOKEN from file if GH_TOKEN_FILE is set
+                if [ -n "''${GH_TOKEN_FILE:-}" ] && [ -f "$GH_TOKEN_FILE" ]; then
+                  export GH_TOKEN=$(cat "$GH_TOKEN_FILE")
+                fi
+                exec "$@"
+              '';
+            in ''
               mkdir -p $out/share/pr-dashboard
               cp server.ts index.html $out/share/pr-dashboard/
 
               mkdir -p $out/bin
-              makeWrapper ${pkgs.bun}/bin/bun $out/bin/pr-dashboard \
-                --add-flags "run $out/share/pr-dashboard/server.ts" \
+              makeWrapper ${entrypoint} $out/bin/pr-dashboard \
+                --add-flags "${pkgs.bun}/bin/bun run $out/share/pr-dashboard/server.ts" \
                 --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.gh ]}
             '';
           };
