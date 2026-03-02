@@ -2,11 +2,13 @@ const PORT = Number(process.env.PORT ?? 3333);
 const REFRESH_INTERVAL_MS = 2 * 60 * 1000;
 const OPENCODE_URL = process.env.OPENCODE_URL ?? "http://mentat:9741";
 const OPENCODE_ENABLED = process.env.OPENCODE_ENABLED !== "false";
+const CURRENT_USER = process.env.GH_USER ?? "isaac-renner";
 
 // --- Types ---
 
 interface PR {
   number: number;
+  state: "OPEN" | "CLOSED" | "MERGED";
   title: string;
   url: string;
   isDraft: boolean;
@@ -17,6 +19,11 @@ interface PR {
   checks: string | null;
   mergeable: string | null;
   jiraTicket: string | null;
+  pipelineState: "SUCCESS" | "FAILURE" | "PENDING" | null;
+  pipelineUrl: string | null;
+  unresolvedCount: number;
+  unresolvedThreads: ReadonlyArray<UnresolvedThread>;
+  reviewState: "APPROVED" | "CHANGES_REQUESTED" | "PENDING";
 }
 
 interface SessionRef {
@@ -45,10 +52,35 @@ interface OCSession {
 
 const PR_FIELDS = `
   ... on PullRequest {
-    number title url isDraft createdAt updatedAt headRefName mergeable
+    number state title url isDraft createdAt updatedAt headRefName mergeable
     repository { name nameWithOwner }
     commits(last: 1) {
-      nodes { commit { statusCheckRollup { state } } }
+      nodes {
+        commit {
+          statusCheckRollup {
+            state
+            contexts(first: 50) {
+              nodes {
+                __typename
+                ... on CheckRun { name status conclusion detailsUrl }
+                ... on StatusContext { context state targetUrl }
+              }
+            }
+          }
+        }
+      }
+    }
+    reviews(last: 50) {
+      nodes { author { __typename login } state submittedAt }
+    }
+    reviewThreads(last: 50) {
+      nodes {
+        id
+        isResolved
+        comments(last: 20) {
+          nodes { author { __typename login } bodyText createdAt url }
+        }
+      }
     }
   }
 `;
@@ -64,6 +96,7 @@ const GQL_QUERY = `{
 
 interface GQLNode {
   number: number;
+  state: "OPEN" | "CLOSED" | "MERGED";
   title: string;
   url: string;
   isDraft: boolean;
@@ -72,11 +105,69 @@ interface GQLNode {
   headRefName: string;
   mergeable: string | null;
   repository: { name: string; nameWithOwner: string };
-  commits: {
+  reviews: {
+    nodes: Array<{ author: AuthorRef | null; state: string; submittedAt: string }>;
+  };
+  reviewThreads: {
     nodes: Array<{
-      commit: { statusCheckRollup: { state: string } | null };
+      id: string;
+      isResolved: boolean;
+      comments: {
+        nodes: Array<{
+          author: AuthorRef | null;
+          bodyText: string;
+          createdAt: string;
+          url: string;
+        }>;
+      };
     }>;
   };
+  commits: {
+    nodes: Array<{
+      commit: {
+        statusCheckRollup: {
+          state: string;
+          contexts: {
+            nodes: Array<
+              | {
+                  __typename: "CheckRun";
+                  name: string;
+                  status: string;
+                  conclusion: string | null;
+                  detailsUrl: string | null;
+                }
+              | {
+                  __typename: "StatusContext";
+                  context: string;
+                  state: string;
+                  targetUrl: string | null;
+                }
+            >;
+          };
+        } | null;
+      };
+    }>;
+  };
+}
+
+interface AuthorRef {
+  __typename: string;
+  login: string;
+}
+
+interface CommentRef {
+  authorLogin: string | null;
+  isBot: boolean;
+  createdAt: string;
+}
+
+interface UnresolvedThread {
+  id: string;
+  authorLogin: string;
+  bodyText: string;
+  createdAt: string;
+  url: string;
+  replied: boolean;
 }
 
 function parseJiraTicket(title: string, branch: string): string | null {
@@ -84,9 +175,135 @@ function parseJiraTicket(title: string, branch: string): string | null {
   return match?.[0] ?? null;
 }
 
+function isBotAuthor(author: AuthorRef | null): boolean {
+  if (!author) return false;
+  if (author.__typename === "Bot") return true;
+  const login = author.login.toLowerCase();
+  return login.endsWith("[bot]");
+}
+
+function toCommentRefs(
+  nodes: ReadonlyArray<{ author: AuthorRef | null; createdAt: string }>,
+): ReadonlyArray<CommentRef> {
+  return nodes.map((n) => ({
+    authorLogin: n.author?.login ?? null,
+    isBot: isBotAuthor(n.author),
+    createdAt: n.createdAt,
+  }));
+}
+
+function countMissingReplies(
+  comments: ReadonlyArray<CommentRef>,
+  currentUser: string,
+): number {
+  const currentLower = currentUser.toLowerCase();
+  const sorted = [...comments].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+  let lastMineIndex = -1;
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (sorted[i].authorLogin?.toLowerCase() === currentLower) {
+      lastMineIndex = i;
+    }
+  }
+  let missing = 0;
+  for (let i = lastMineIndex + 1; i < sorted.length; i += 1) {
+    const c = sorted[i];
+    if (!c.isBot && c.authorLogin && c.authorLogin.toLowerCase() !== currentLower)
+      missing += 1;
+  }
+  return missing;
+}
+
+function reviewState(
+  reviews: ReadonlyArray<{ author: AuthorRef | null; state: string }>,
+  currentUser: string,
+): "APPROVED" | "CHANGES_REQUESTED" | "PENDING" {
+  const currentLower = currentUser.toLowerCase();
+  let hasApproval = false;
+  for (const r of reviews) {
+    const authorLogin = r.author?.login ?? null;
+    if (!authorLogin || authorLogin.toLowerCase() === currentLower) continue;
+    if (isBotAuthor(r.author)) continue;
+    if (r.state === "CHANGES_REQUESTED") return "CHANGES_REQUESTED";
+    if (r.state === "APPROVED") hasApproval = true;
+  }
+  return hasApproval ? "APPROVED" : "PENDING";
+}
+
+function pipelineInfo(
+  rollup: GQLNode["commits"]["nodes"][number]["commit"]["statusCheckRollup"],
+): { state: "SUCCESS" | "FAILURE" | "PENDING" | null; url: string | null } {
+  if (!rollup) return { state: null, url: null };
+  const nodes = rollup.contexts.nodes;
+  for (const node of nodes) {
+    if (node.__typename === "CheckRun") {
+      if (node.detailsUrl && node.detailsUrl.includes("buildkite.com/")) {
+        const conclusion = node.conclusion;
+        if (conclusion === "SUCCESS") return { state: "SUCCESS", url: node.detailsUrl };
+        if (conclusion === "FAILURE" || conclusion === "CANCELLED")
+          return { state: "FAILURE", url: node.detailsUrl };
+        return { state: "PENDING", url: node.detailsUrl };
+      }
+    } else if (node.__typename === "StatusContext") {
+      if (node.targetUrl && node.targetUrl.includes("buildkite.com/")) {
+        if (node.state === "SUCCESS") return { state: "SUCCESS", url: node.targetUrl };
+        if (node.state === "FAILURE" || node.state === "ERROR")
+          return { state: "FAILURE", url: node.targetUrl };
+        return { state: "PENDING", url: node.targetUrl };
+      }
+    }
+  }
+  return { state: null, url: null };
+}
+
+function unresolvedThreads(
+  threads: ReadonlyArray<GQLNode["reviewThreads"]["nodes"][number]>,
+  currentUser: string,
+): ReadonlyArray<UnresolvedThread> {
+  const currentLower = currentUser.toLowerCase();
+  const result: Array<UnresolvedThread> = [];
+  for (const thread of threads) {
+    if (thread.isResolved) continue;
+    let firstOther: { authorLogin: string; bodyText: string; createdAt: string; url: string } | null = null;
+    let replied = false;
+    for (const c of thread.comments.nodes) {
+      const login = c.author?.login ?? null;
+      if (login && login.toLowerCase() === currentLower) {
+        replied = true;
+      }
+      if (!firstOther && c.author && !isBotAuthor(c.author)) {
+        if (login && login.toLowerCase() !== currentLower) {
+          firstOther = {
+            authorLogin: login,
+            bodyText: c.bodyText,
+            createdAt: c.createdAt,
+            url: c.url,
+          };
+        }
+      }
+    }
+    if (firstOther) {
+      result.push({
+        id: thread.id,
+        authorLogin: firstOther.authorLogin,
+        bodyText: firstOther.bodyText,
+        createdAt: firstOther.createdAt,
+        url: firstOther.url,
+        replied,
+      });
+    }
+  }
+  return result;
+}
+
 function topr(n: GQLNode): PR {
+  const rollup = n.commits.nodes[0]?.commit?.statusCheckRollup ?? null;
+  const pipeline = pipelineInfo(rollup);
+  const unresolved = unresolvedThreads(n.reviewThreads.nodes, CURRENT_USER);
   return {
     number: n.number,
+    state: n.state,
     title: n.title,
     url: n.url,
     isDraft: n.isDraft,
@@ -97,6 +314,11 @@ function topr(n: GQLNode): PR {
     checks: n.commits.nodes[0]?.commit?.statusCheckRollup?.state ?? null,
     mergeable: n.mergeable,
     jiraTicket: parseJiraTicket(n.title, n.headRefName),
+    pipelineState: pipeline.state,
+    pipelineUrl: pipeline.url,
+    unresolvedCount: unresolved.length,
+    unresolvedThreads: unresolved,
+    reviewState: reviewState(n.reviews.nodes, CURRENT_USER),
   };
 }
 
@@ -303,6 +525,7 @@ function filterPRs(
   const repoFilter = (params.get("repo") ?? "").trim().toLowerCase();
 
   const filtered = prs.filter((pr) => {
+    if (pr.state !== "OPEN") return false;
     if (excludeDrafts && pr.isDraft) return false;
     if (onlyAilo && !pr.repository.nameWithOwner.startsWith("ailohq/"))
       return false;
