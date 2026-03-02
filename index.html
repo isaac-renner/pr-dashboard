@@ -226,10 +226,13 @@
         <option value="ticket">Ticket</option>
         <option value="repo">Repo</option>
       </select></label>
-    <label>Org
-      <select name="org">
-        <option value="ailohq">ailohq only</option>
-        <option value="all">All orgs</option>
+    <label>Pipeline
+      <select name="pipeline">
+        <option value="all">Any</option>
+        <option value="failing">Failing</option>
+        <option value="pending">Pending</option>
+        <option value="passing">Passing</option>
+        <option value="none">No pipeline</option>
       </select></label>
     <button type="submit">Apply</button>
   </form>
@@ -358,10 +361,10 @@
       var badge = '<span class="comment-badge">' + threads.length + '</span>';
       var items = threads.slice(0, 8).map(function(t) {
         var snippet = truncate(t.bodyText || "", 60);
-        var replied = t.replied ? "replied" : "no reply";
+        var status = t.replied ? "replied earlier" : "unaddressed";
         return '<div class="comment-item">' +
           '<a href="' + escapeHtml(t.url) + '" target="_blank">' + escapeHtml(t.authorLogin) + ': ' + escapeHtml(snippet) + '</a>' +
-          '<div class="comment-meta">' + timeAgo(t.createdAt) + ' • ' + replied + '</div>' +
+          '<div class="comment-meta">' + timeAgo(t.createdAt) + ' • ' + status + '</div>' +
         '</div>';
       }).join('');
       var more = threads.length > 8 ? '<div class="comment-meta" style="padding:0.3rem 0">+' + (threads.length - 8) + ' more</div>' : '';
@@ -449,7 +452,7 @@
         '<div class="mono"><span class="m-label">Pipeline</span><span>' + pipelineLabel(pr.pipelineState, pr.pipelineUrl) + '</span></div>' +
         '<div class="mono hide-md"><span class="m-label">Deploy</span><span>' + deployCell(pr.deployLink) + '</span></div>' +
         '<div class="mono"><span class="m-label">Conflicts</span><span>' + mergeableLabel(pr.mergeable) + '</span></div>' +
-        '<div class="mono"><span class="m-label">Unresolved</span><span>' + commentCell(pr.unresolvedThreads) + '</span></div>' +
+        '<div class="mono"><span class="m-label">Comments</span><span>' + commentCell(pr.unresolvedThreads) + '</span></div>' +
         '<div class="mono hide-md"><span class="m-label">Ticket</span><span>' + (pr.jiraTicket ? jiraCell(pr.jiraTicket) : '--') + '</span></div>' +
         '<div class="mono"><span class="m-label">Sessions</span><span>' + sessionsCell(pr.sessions) + '</span></div>' +
       '</div>';
@@ -508,7 +511,7 @@
           '<div>Pipeline</div>' +
           '<div class="hide-md">Deploy</div>' +
           '<div>Conflicts</div>' +
-          '<div>Unresolved</div>' +
+          '<div>Comments</div>' +
           '<div class="hide-md">Ticket</div>' +
           '<div>Sessions</div>' +
         '</div>' +
@@ -552,7 +555,7 @@
           '<div>Pipeline</div>' +
           '<div class="hide-md">Deploy</div>' +
           '<div>Conflicts</div>' +
-          '<div>Unresolved</div>' +
+          '<div>Comments</div>' +
           '<div class="hide-md">Ticket</div>' +
           '<div>Sessions</div>' +
         '</div>' +

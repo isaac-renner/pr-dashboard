@@ -40,9 +40,11 @@ Server listens on `0.0.0.0:${PORT}` (default `3333`).
 ### Filters (`/api/prs` query params)
 
 - `drafts=include` to include draft PRs (default excludes).
-- `org=all` to include non-`ailohq` repos (default `ailohq` only).
 - `exclude=foo,bar` to remove PRs whose titles contain any keyword.
 - `repo=substr` to filter by repo name.
+- `pipeline=all|failing|pending|passing|none` to filter by pipeline status.
+
+Note: PRs are always scoped to `ailohq/*` repositories.
 
 ## OpenCode correlation rules
 

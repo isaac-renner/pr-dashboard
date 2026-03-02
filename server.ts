@@ -162,12 +162,6 @@ interface AuthorRef {
   login: string;
 }
 
-interface CommentRef {
-  authorLogin: string | null;
-  isBot: boolean;
-  createdAt: string;
-}
-
 interface UnresolvedThread {
   id: string;
   authorLogin: string;
@@ -189,38 +183,6 @@ function isBotAuthor(author: AuthorRef | null): boolean {
   return login.endsWith("[bot]");
 }
 
-function toCommentRefs(
-  nodes: ReadonlyArray<{ author: AuthorRef | null; createdAt: string }>,
-): ReadonlyArray<CommentRef> {
-  return nodes.map((n) => ({
-    authorLogin: n.author?.login ?? null,
-    isBot: isBotAuthor(n.author),
-    createdAt: n.createdAt,
-  }));
-}
-
-function countMissingReplies(
-  comments: ReadonlyArray<CommentRef>,
-  currentUser: string,
-): number {
-  const currentLower = currentUser.toLowerCase();
-  const sorted = [...comments].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-  let lastMineIndex = -1;
-  for (let i = 0; i < sorted.length; i += 1) {
-    if (sorted[i].authorLogin?.toLowerCase() === currentLower) {
-      lastMineIndex = i;
-    }
-  }
-  let missing = 0;
-  for (let i = lastMineIndex + 1; i < sorted.length; i += 1) {
-    const c = sorted[i];
-    if (!c.isBot && c.authorLogin && c.authorLogin.toLowerCase() !== currentLower)
-      missing += 1;
-  }
-  return missing;
-}
 
 function reviewState(
   reviews: ReadonlyArray<{ author: AuthorRef | null; state: string }>,
@@ -327,31 +289,48 @@ function unresolvedThreads(
   const result: Array<UnresolvedThread> = [];
   for (const thread of threads) {
     if (thread.isResolved) continue;
-    let firstOther: { authorLogin: string; bodyText: string; createdAt: string; url: string } | null = null;
-    let replied = false;
-    for (const c of thread.comments.nodes) {
-      const login = c.author?.login ?? null;
-      if (login && login.toLowerCase() === currentLower) {
-        replied = true;
-      }
-      if (!firstOther && c.author && !isBotAuthor(c.author)) {
-        if (login && login.toLowerCase() !== currentLower) {
-          firstOther = {
-            authorLogin: login,
+    const comments = thread.comments.nodes
+      .reduce(
+        (acc, c) => {
+          if (!c.author || isBotAuthor(c.author)) return acc;
+          acc.push({
+            authorLogin: c.author.login,
+            loginLower: c.author.login.toLowerCase(),
             bodyText: c.bodyText,
             createdAt: c.createdAt,
             url: c.url,
-          };
-        }
-      }
-    }
-    if (firstOther) {
+          });
+          return acc;
+        },
+        [] as Array<{
+          authorLogin: string;
+          loginLower: string;
+          bodyText: string;
+          createdAt: string;
+          url: string;
+        }>,
+      )
+      .sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
+
+    if (comments.length === 0) continue;
+
+    const hasExternal = comments.some((c) => c.loginLower !== currentLower);
+    if (!hasExternal) continue;
+
+    const last = comments[comments.length - 1];
+    if (last.loginLower === currentLower) continue;
+
+    const replied = comments.some((c) => c.loginLower === currentLower);
+
+    if (last) {
       result.push({
         id: thread.id,
-        authorLogin: firstOther.authorLogin,
-        bodyText: firstOther.bodyText,
-        createdAt: firstOther.createdAt,
-        url: firstOther.url,
+        authorLogin: last.authorLogin,
+        bodyText: last.bodyText,
+        createdAt: last.createdAt,
+        url: last.url,
         replied,
       });
     }
@@ -580,7 +559,7 @@ function filterPRs(
   params: URLSearchParams,
 ): ReadonlyArray<PR> {
   const excludeDrafts = params.get("drafts") === "exclude";
-  const onlyAilo = params.get("org") !== "all";
+  const pipelineFilter = (params.get("pipeline") ?? "all").toLowerCase();
   const excludeKeywords = (params.get("exclude") ?? "")
     .split(",")
     .map((k) => k.trim().toLowerCase())
@@ -590,10 +569,13 @@ function filterPRs(
   const filtered = prs.filter((pr) => {
     if (pr.state !== "OPEN") return false;
     if (excludeDrafts && pr.isDraft) return false;
-    if (onlyAilo && !pr.repository.nameWithOwner.startsWith("ailohq/"))
-      return false;
+    if (!pr.repository.nameWithOwner.startsWith("ailohq/")) return false;
     if (repoFilter && !pr.repository.name.toLowerCase().includes(repoFilter))
       return false;
+    if (pipelineFilter === "failing" && pr.pipelineState !== "FAILURE") return false;
+    if (pipelineFilter === "pending" && pr.pipelineState !== "PENDING") return false;
+    if (pipelineFilter === "passing" && pr.pipelineState !== "SUCCESS") return false;
+    if (pipelineFilter === "none" && pr.pipelineState !== null) return false;
     if (excludeKeywords.some((kw) => pr.title.toLowerCase().includes(kw)))
       return false;
     return true;
