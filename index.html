@@ -77,12 +77,19 @@
     /* Buckets */
     .bucket { border: 1px solid var(--panel-border); border-radius: 2px; background: var(--panel); margin-bottom: 1.5rem; overflow: hidden; }
     .bucket-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--panel-border); background: var(--panel-2); }
+    .bucket-toggle, .ticket-toggle { cursor: pointer; user-select: none; }
     .bucket-title { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text); }
     .bucket-meta { font-size: 0.8rem; color: var(--text); }
+    .bucket-indicator::before { content: "[-]"; margin-left: 0.5rem; }
+    .bucket.collapsed .bucket-indicator::before { content: "[+]"; }
+    .bucket.collapsed .bucket-body { display: none; }
     .ticket { padding: 0.7rem 0.9rem 0.6rem; border-bottom: 1px dashed #000000; }
     .ticket:last-child { border-bottom: none; }
     .ticket-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
     .ticket-meta { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .ticket-indicator::before { content: "[-]"; margin-left: 0.4rem; }
+    .ticket.collapsed .ticket-indicator::before { content: "[+]"; }
+    .ticket.collapsed .ticket-body { display: none; }
     .ticket-title { font-size: 0.95rem; font-weight: 600; }
     .ticket-title a { color: var(--accent); text-decoration: none; }
     .ticket-title a:hover { text-decoration: underline; }
@@ -94,10 +101,12 @@
 
     .repo-group { margin-bottom: 0.9rem; }
     .repo-title { font-size: 0.8rem; color: var(--text); margin-bottom: 0.4rem; letter-spacing: 0.04em; }
-    .bucket-head { display: grid; grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr 0.7fr 0.5fr; gap: 0.7rem; padding: 0.4rem 0.9rem; border-bottom: 1px solid #000000; font-size: 0.75rem; }
+    .ticket-header .repo-title { margin-bottom: 0; }
+    .bucket-head { display: grid; grid-template-columns: 1.9fr 0.9fr 0.9fr 1.1fr 0.8fr 0.8fr 0.8fr 0.5fr; gap: 0.7rem; padding: 0.4rem 0.9rem; border-bottom: 1px solid #000000; font-size: 0.75rem; }
     .pr-head { display: none; }
-    .pr-row { display: grid; grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr 0.7fr 0.5fr; gap: 0.7rem; padding: 0.45rem 0.2rem; border-bottom: 1px dotted #000000; align-items: center; font-size: 0.8rem; }
+    .pr-row { display: grid; grid-template-columns: 1.9fr 0.9fr 0.9fr 1.1fr 0.8fr 0.8fr 0.8fr 0.5fr; gap: 0.7rem; padding: 0.45rem 0.2rem; border-bottom: 1px dotted #000000; align-items: center; font-size: 0.8rem; }
     .pr-row:last-child { border-bottom: none; }
+    .m-label { display: none; }
     .pr-title { display: flex; flex-direction: column; gap: 0.2rem; }
     .pr-title a { color: var(--text); text-decoration: underline; }
     .pr-title a:hover { text-decoration: underline; }
@@ -105,6 +114,8 @@
     .mono { font-family: inherit; font-size: 0.75rem; }
     .jira { color: var(--text); text-decoration: underline; }
     .jira:hover { text-decoration: underline; }
+    .deploy { color: var(--text); text-decoration: underline; }
+    .deploy:hover { text-decoration: underline; }
     .checks { font-size: 0.75rem; white-space: nowrap; }
     .status-open { color: var(--text); }
     .status-draft { color: var(--text); }
@@ -175,17 +186,21 @@
 
     @media (max-width: 980px) {
       .filters { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
-      .bucket-head { grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr; }
-      .pr-row { grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr; }
+      .bucket-head { grid-template-columns: 1.9fr 0.9fr 0.9fr 0.8fr 0.8fr 0.5fr; }
+      .pr-row { grid-template-columns: 1.9fr 0.9fr 0.9fr 0.8fr 0.8fr 0.5fr; }
       .pr-row .hide-md { display: none; }
+      .bucket-head .hide-md { display: none; }
     }
     @media (max-width: 720px) {
       .filters { grid-template-columns: 1fr; }
       body { padding: 1.5rem; }
       .header { flex-direction: column; align-items: flex-start; }
-      .pr-row { grid-template-columns: 1fr; gap: 0.4rem; }
-      .pr-row > div { display: flex; justify-content: space-between; }
-      .pr-row .pr-title { align-items: flex-start; }
+      .bucket-head { display: none; }
+      .pr-row { display: block; border: 1px solid var(--panel-border); padding: 0.45rem 0.55rem; margin-bottom: 0.6rem; }
+      .pr-row > div { display: flex; justify-content: space-between; align-items: baseline; gap: 0.7rem; padding: 0.15rem 0; }
+      .pr-row .pr-title { display: block; border-bottom: 1px dotted var(--panel-border); margin-bottom: 0.2rem; padding-bottom: 0.35rem; }
+      .pr-row .hide-md { display: flex; }
+      .m-label { display: inline-block; min-width: 86px; font-size: 0.72rem; }
     }
   </style>
 </head>
@@ -210,11 +225,6 @@
       <select name="group">
         <option value="ticket">Ticket</option>
         <option value="repo">Repo</option>
-      </select></label>
-    <label>Drafts
-      <select name="drafts">
-        <option value="exclude">Exclude drafts</option>
-        <option value="include">Include drafts</option>
       </select></label>
     <label>Org
       <select name="org">
@@ -303,6 +313,12 @@
     function jiraCell(ticket) {
       if (!ticket) return "";
       return '<a class="jira" href="' + JIRA_BASE + '/' + ticket + '" target="_blank">' + ticket + '</a>';
+    }
+
+    function deployCell(deployLink) {
+      if (!deployLink || !deployLink.url) return '<span class="sessions-none">--</span>';
+      var label = deployLink.label || "Deploy";
+      return '<a class="deploy" href="' + escapeHtml(deployLink.url) + '" target="_blank">' + escapeHtml(truncate(label, 28)) + '</a>';
     }
 
     function escapeHtml(s) {
@@ -423,6 +439,22 @@
 
     // --- Rendering ---
 
+    function renderPRRow(pr) {
+      return '<div class="pr-row">' +
+        '<div class="pr-title">' +
+          '<a href="' + pr.url + '" target="_blank">#' + pr.number + ' ' + escapeHtml(pr.title) + '</a>' +
+          '<div class="pr-meta">' + statusLabel(pr.isDraft) + ' • ' + timeAgo(pr.updatedAt) + '</div>' +
+        '</div>' +
+        '<div class="mono"><span class="m-label">Review</span><span>' + reviewLabel(pr.reviewState) + '</span></div>' +
+        '<div class="mono"><span class="m-label">Pipeline</span><span>' + pipelineLabel(pr.pipelineState, pr.pipelineUrl) + '</span></div>' +
+        '<div class="mono hide-md"><span class="m-label">Deploy</span><span>' + deployCell(pr.deployLink) + '</span></div>' +
+        '<div class="mono"><span class="m-label">Conflicts</span><span>' + mergeableLabel(pr.mergeable) + '</span></div>' +
+        '<div class="mono"><span class="m-label">Unresolved</span><span>' + commentCell(pr.unresolvedThreads) + '</span></div>' +
+        '<div class="mono hide-md"><span class="m-label">Ticket</span><span>' + (pr.jiraTicket ? jiraCell(pr.jiraTicket) : '--') + '</span></div>' +
+        '<div class="mono"><span class="m-label">Sessions</span><span>' + sessionsCell(pr.sessions) + '</span></div>' +
+      '</div>';
+    }
+
     function renderBucket(title, prs) {
       var total = prs.length;
       if (!total) return '';
@@ -447,50 +479,41 @@
         repoGroups.forEach(function(repoPrs, repo) {
           repoBlocks += '<div class="repo-group">' +
             '<div class="repo-title">' + repo + ' • ' + repoPrs.length + ' PR' + (repoPrs.length === 1 ? '' : 's') + '</div>' +
-            repoPrs.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); }).map(function(pr) {
-              return '<div class="pr-row">' +
-                '<div class="pr-title">' +
-                  '<a href="' + pr.url + '" target="_blank">#' + pr.number + ' ' + escapeHtml(pr.title) + '</a>' +
-                  '<div class="pr-meta">' + statusLabel(pr.isDraft) + ' • ' + timeAgo(pr.updatedAt) + '</div>' +
-                '</div>' +
-                '<div class="mono">' + reviewLabel(pr.reviewState) + '</div>' +
-                '<div class="mono">' + pipelineLabel(pr.pipelineState, pr.pipelineUrl) + '</div>' +
-                '<div class="mono">' + mergeableLabel(pr.mergeable) + '</div>' +
-                '<div class="mono">' + commentCell(pr.unresolvedThreads) + '</div>' +
-                '<div class="mono hide-md">' + (pr.jiraTicket ? jiraCell(pr.jiraTicket) : '--') + '</div>' +
-                '<div class="mono">' + sessionsCell(pr.sessions) + '</div>' +
-              '</div>';
-            }).join('') +
+            repoPrs.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); }).map(renderPRRow).join('') +
           '</div>';
         });
 
         ticketBlocks += '<div class="ticket">' +
-          '<div class="ticket-header">' +
+          '<div class="ticket-header ticket-toggle">' +
             '<div class="ticket-meta">' + ticketLink +
               '<span class="pill">' + ticketPrs.length + ' PR' + (ticketPrs.length === 1 ? '' : 's') + '</span>' +
               '<span class="pill">latest ' + timeAgo(latest.updatedAt) + '</span>' +
+              '<span class="ticket-indicator"></span>' +
             '</div>' +
             '<div class="ticket-badges"></div>' +
           '</div>' +
-          repoBlocks +
+          '<div class="ticket-body">' + repoBlocks + '</div>' +
         '</div>';
       });
 
       return '<div class="bucket">' +
-        '<div class="bucket-header">' +
+        '<div class="bucket-header bucket-toggle">' +
           '<div class="bucket-title">' + title + '</div>' +
-          '<div class="bucket-meta">' + total + ' PR' + (total === 1 ? '' : 's') + '</div>' +
+          '<div class="bucket-meta">' + total + ' PR' + (total === 1 ? '' : 's') + '<span class="bucket-indicator"></span></div>' +
         '</div>' +
+        '<div class="bucket-body">' +
         '<div class="bucket-head">' +
           '<div>PR</div>' +
           '<div>Review</div>' +
           '<div>Pipeline</div>' +
+          '<div class="hide-md">Deploy</div>' +
           '<div>Conflicts</div>' +
           '<div>Unresolved</div>' +
           '<div class="hide-md">Ticket</div>' +
           '<div>Sessions</div>' +
         '</div>' +
         ticketBlocks +
+        '</div>' +
       '</div>';
     }
 
@@ -507,39 +530,34 @@
         var repo = entry[0];
         var repoPrs = entry[1];
         repoBlocks += '<div class="ticket">' +
-          '<div class="repo-title">' + repo + ' • ' + repoPrs.length + ' PR' + (repoPrs.length === 1 ? '' : 's') + '</div>' +
-          repoPrs.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); }).map(function(pr) {
-            return '<div class="pr-row">' +
-              '<div class="pr-title">' +
-                '<a href="' + pr.url + '" target="_blank">#' + pr.number + ' ' + escapeHtml(pr.title) + '</a>' +
-                '<div class="pr-meta">' + statusLabel(pr.isDraft) + ' • ' + timeAgo(pr.updatedAt) + '</div>' +
-              '</div>' +
-              '<div class="mono">' + reviewLabel(pr.reviewState) + '</div>' +
-              '<div class="mono">' + pipelineLabel(pr.pipelineState, pr.pipelineUrl) + '</div>' +
-              '<div class="mono">' + mergeableLabel(pr.mergeable) + '</div>' +
-              '<div class="mono">' + commentCell(pr.unresolvedThreads) + '</div>' +
-              '<div class="mono hide-md">' + (pr.jiraTicket ? jiraCell(pr.jiraTicket) : '--') + '</div>' +
-              '<div class="mono">' + sessionsCell(pr.sessions) + '</div>' +
-            '</div>';
-          }).join('') +
+          '<div class="ticket-header ticket-toggle">' +
+            '<div class="ticket-meta"><span class="repo-title">' + repo + '</span>' +
+            '<span class="pill">' + repoPrs.length + ' PR' + (repoPrs.length === 1 ? '' : 's') + '</span>' +
+            '<span class="ticket-indicator"></span></div><div></div></div>' +
+          '<div class="ticket-body">' +
+          repoPrs.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); }).map(renderPRRow).join('') +
+          '</div>' +
         '</div>';
       });
 
       return '<div class="bucket">' +
-        '<div class="bucket-header">' +
+        '<div class="bucket-header bucket-toggle">' +
           '<div class="bucket-title">' + title + '</div>' +
-          '<div class="bucket-meta">' + total + ' PR' + (total === 1 ? '' : 's') + '</div>' +
+          '<div class="bucket-meta">' + total + ' PR' + (total === 1 ? '' : 's') + '<span class="bucket-indicator"></span></div>' +
         '</div>' +
+        '<div class="bucket-body">' +
         '<div class="bucket-head">' +
           '<div>PR</div>' +
           '<div>Review</div>' +
           '<div>Pipeline</div>' +
+          '<div class="hide-md">Deploy</div>' +
           '<div>Conflicts</div>' +
           '<div>Unresolved</div>' +
           '<div class="hide-md">Ticket</div>' +
           '<div>Sessions</div>' +
         '</div>' +
         repoBlocks +
+        '</div>' +
       '</div>';
     }
 
@@ -602,6 +620,22 @@
     // --- Events ---
 
     document.addEventListener("click", function(e) {
+      if (!e.target.closest("a, button, input, select, textarea")) {
+        var bucketToggle = e.target.closest(".bucket-toggle");
+        if (bucketToggle) {
+          var bucket = bucketToggle.closest(".bucket");
+          if (bucket) bucket.classList.toggle("collapsed");
+          return;
+        }
+
+        var ticketToggle = e.target.closest(".ticket-toggle");
+        if (ticketToggle) {
+          var ticket = ticketToggle.closest(".ticket");
+          if (ticket) ticket.classList.toggle("collapsed");
+          return;
+        }
+      }
+
       var commentToggle = e.target.closest(".comment-badge");
       var sessionToggle = e.target.closest(".session-badge");
       var inCommentList = e.target.closest(".comment-list");

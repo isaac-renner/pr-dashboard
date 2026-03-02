@@ -21,9 +21,16 @@ interface PR {
   jiraTicket: string | null;
   pipelineState: "SUCCESS" | "FAILURE" | "PENDING" | null;
   pipelineUrl: string | null;
+  deployLink: DeployLink | null;
   unresolvedCount: number;
   unresolvedThreads: ReadonlyArray<UnresolvedThread>;
   reviewState: "APPROVED" | "CHANGES_REQUESTED" | "PENDING";
+}
+
+interface DeployLink {
+  label: string;
+  branch: string;
+  url: string;
 }
 
 interface SessionRef {
@@ -233,28 +240,83 @@ function reviewState(
 
 function pipelineInfo(
   rollup: GQLNode["commits"]["nodes"][number]["commit"]["statusCheckRollup"],
-): { state: "SUCCESS" | "FAILURE" | "PENDING" | null; url: string | null } {
-  if (!rollup) return { state: null, url: null };
+  headRefName: string,
+): {
+  state: "SUCCESS" | "FAILURE" | "PENDING" | null;
+  url: string | null;
+  deployLink: DeployLink | null;
+} {
+  if (!rollup) return { state: null, url: null, deployLink: null };
   const nodes = rollup.contexts.nodes;
+  let state: "SUCCESS" | "FAILURE" | "PENDING" | null = null;
+  let url: string | null = null;
+  let deployLink: DeployLink | null = null;
+
+  const severity = {
+    FAILURE: 3,
+    PENDING: 2,
+    SUCCESS: 1,
+  };
+
+  function contextState(nodeState: string | null): "SUCCESS" | "FAILURE" | "PENDING" {
+    if (!nodeState) return "PENDING";
+    if (nodeState === "SUCCESS") return "SUCCESS";
+    if (nodeState === "FAILURE" || nodeState === "ERROR" || nodeState === "CANCELLED")
+      return "FAILURE";
+    return "PENDING";
+  }
+
+  function deployBranch(name: string): string | null {
+    const match = name.match(/deploy\s+to\s+(.+)$/i);
+    if (!match) return null;
+    const branch = match[1].trim();
+    return branch.length > 0 ? branch : null;
+  }
+
   for (const node of nodes) {
+    let nodeUrl: string | null = null;
+    let nodeState: "SUCCESS" | "FAILURE" | "PENDING" = "PENDING";
+    let label = "";
+
     if (node.__typename === "CheckRun") {
-      if (node.detailsUrl && node.detailsUrl.includes("buildkite.com/")) {
-        const conclusion = node.conclusion;
-        if (conclusion === "SUCCESS") return { state: "SUCCESS", url: node.detailsUrl };
-        if (conclusion === "FAILURE" || conclusion === "CANCELLED")
-          return { state: "FAILURE", url: node.detailsUrl };
-        return { state: "PENDING", url: node.detailsUrl };
-      }
+      nodeUrl = node.detailsUrl;
+      nodeState = contextState(node.conclusion ?? node.status);
+      label = node.name;
     } else if (node.__typename === "StatusContext") {
-      if (node.targetUrl && node.targetUrl.includes("buildkite.com/")) {
-        if (node.state === "SUCCESS") return { state: "SUCCESS", url: node.targetUrl };
-        if (node.state === "FAILURE" || node.state === "ERROR")
-          return { state: "FAILURE", url: node.targetUrl };
-        return { state: "PENDING", url: node.targetUrl };
+      nodeUrl = node.targetUrl;
+      nodeState = contextState(node.state);
+      label = node.context;
+    }
+
+    if (!nodeUrl || !nodeUrl.includes("buildkite.com/")) {
+      continue;
+    }
+
+    if (state === null || severity[nodeState] > severity[state]) {
+      state = nodeState;
+      url = nodeUrl;
+    }
+
+    const branch = deployBranch(label);
+    if (branch && nodeState === "SUCCESS") {
+      const next: DeployLink = {
+        label: `Deploy ${branch}`,
+        branch,
+        url: nodeUrl,
+      };
+      if (!deployLink) {
+        deployLink = next;
+      } else {
+        const currIsHead = deployLink.branch.toLowerCase() === headRefName.toLowerCase();
+        const nextIsHead = next.branch.toLowerCase() === headRefName.toLowerCase();
+        if (!currIsHead && nextIsHead) {
+          deployLink = next;
+        }
       }
     }
   }
-  return { state: null, url: null };
+
+  return { state, url, deployLink };
 }
 
 function unresolvedThreads(
@@ -299,7 +361,7 @@ function unresolvedThreads(
 
 function topr(n: GQLNode): PR {
   const rollup = n.commits.nodes[0]?.commit?.statusCheckRollup ?? null;
-  const pipeline = pipelineInfo(rollup);
+  const pipeline = pipelineInfo(rollup, n.headRefName);
   const unresolved = unresolvedThreads(n.reviewThreads.nodes, CURRENT_USER);
   return {
     number: n.number,
@@ -316,6 +378,7 @@ function topr(n: GQLNode): PR {
     jiraTicket: parseJiraTicket(n.title, n.headRefName),
     pipelineState: pipeline.state,
     pipelineUrl: pipeline.url,
+    deployLink: pipeline.deployLink,
     unresolvedCount: unresolved.length,
     unresolvedThreads: unresolved,
     reviewState: reviewState(n.reviews.nodes, CURRENT_USER),
@@ -516,7 +579,7 @@ function filterPRs(
   prs: ReadonlyArray<PR>,
   params: URLSearchParams,
 ): ReadonlyArray<PR> {
-  const excludeDrafts = params.get("drafts") !== "include";
+  const excludeDrafts = params.get("drafts") === "exclude";
   const onlyAilo = params.get("org") !== "all";
   const excludeKeywords = (params.get("exclude") ?? "")
     .split(",")
