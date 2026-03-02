@@ -5,108 +5,181 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PR Dashboard</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0 !important; }
+    :root {
+      --bg: #ffffff;
+      --panel: #ffffff;
+      --panel-2: #ffffff;
+      --panel-border: #000000;
+      --text: #000000;
+      --muted: #000000;
+      --accent: #000000;
+      --success: #000000;
+      --danger: #000000;
+      --warning: #000000;
+      --pill: #ffffff;
+    }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0d1117; color: #c9d1d9; padding: 2rem;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      background: var(--bg);
+      color: var(--text);
+      padding: 2rem 2.5rem 3rem;
+      min-height: 100vh;
+      line-height: 1.35;
     }
 
     /* Layout */
-    .header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-    h1 { font-size: 1.4rem; color: #f0f6fc; }
-    .count { font-size: 0.85rem; color: #8b949e; margin-bottom: 0.75rem; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.2rem; }
+    .header h1 { font-size: 1.2rem; letter-spacing: 0.02em; }
+    .tagline { color: var(--text); font-size: 0.8rem; }
+    .count { font-size: 0.8rem; color: var(--text); margin: 0.8rem 0 0.4rem; }
 
     /* Refresh bar */
-    .refresh-bar { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: #8b949e; }
+    .refresh-bar { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; color: var(--text); }
     .refresh-bar button {
-      background: #21262d; color: #c9d1d9; border: 1px solid #30363d;
-      padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+      background: var(--panel); color: var(--text); border: 1px solid var(--panel-border);
+      padding: 0.25rem 0.75rem; border-radius: 2px; cursor: pointer; font-size: 0.8rem;
     }
-    .refresh-bar button:hover { background: #30363d; }
+    .refresh-bar button:hover { background: #ffffff; }
     .refresh-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .refreshing { color: #58a6ff; }
+    .refreshing { color: var(--text); }
 
     /* Filters */
-    .filters { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-    .filters label { font-size: 0.8rem; color: #8b949e; display: flex; flex-direction: column; gap: 0.25rem; }
+    .filters { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)) auto; gap: 0.75rem; margin-bottom: 1.5rem; align-items: end; }
+    .filters label { font-size: 0.75rem; color: var(--text); display: flex; flex-direction: column; gap: 0.3rem; }
     .filters input, .filters select {
-      background: #161b22; border: 1px solid #30363d; color: #c9d1d9;
-      padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem;
+      background: var(--panel); border: 1px solid var(--panel-border); color: var(--text);
+      padding: 0.4rem 0.55rem; border-radius: 2px; font-size: 0.8rem;
+      width: 100%;
     }
     .filters button {
-      background: #238636; color: #fff; border: none;
-      padding: 0.4rem 1rem; border-radius: 6px; cursor: pointer;
-      font-size: 0.85rem; align-self: flex-end;
+      background: var(--panel); color: var(--text); border: 1px solid var(--panel-border);
+      padding: 0.4rem 0.8rem; border-radius: 2px; cursor: pointer;
+      font-size: 0.8rem; align-self: end; font-weight: 600; min-width: 100px;
     }
-    .filters button:hover { background: #2ea043; }
+    .filters button:hover { background: #ffffff; }
 
-    /* Table */
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; font-size: 0.75rem; color: #8b949e; padding: 0.5rem 0.75rem; border-bottom: 1px solid #21262d; }
-    td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #21262d; font-size: 0.85rem; }
-    tr:hover { background: #161b22; }
-    a { color: #58a6ff; text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    /* Buckets */
+    .bucket { border: 1px solid var(--panel-border); border-radius: 2px; background: var(--panel); margin-bottom: 1.5rem; overflow: hidden; }
+    .bucket-header { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--panel-border); background: var(--panel-2); }
+    .bucket-title { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text); }
+    .bucket-meta { font-size: 0.8rem; color: var(--text); }
+    .ticket { padding: 0.7rem 0.9rem 0.6rem; border-bottom: 1px dashed #000000; }
+    .ticket:last-child { border-bottom: none; }
+    .ticket-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
+    .ticket-meta { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .ticket-title { font-size: 0.95rem; font-weight: 600; }
+    .ticket-title a { color: var(--accent); text-decoration: none; }
+    .ticket-title a:hover { text-decoration: underline; }
+    .ticket-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .pill { background: var(--pill); color: var(--text); border: 1px solid var(--panel-border); border-radius: 2px; padding: 0.1rem 0.4rem; font-size: 0.7rem; }
+    .pill-danger { color: var(--text); }
+    .pill-warn { color: var(--text); }
+    .pill-success { color: var(--text); }
 
-    /* Cell styles */
-    .repo { color: #8b949e; }
-    .date { color: #8b949e; white-space: nowrap; }
-    .jira a { color: #d2a8ff; font-size: 0.75rem; }
-    .checks { font-size: 0.8rem; white-space: nowrap; }
-    .checks-success { color: #3fb950; }
-    .checks-failure { color: #f85149; }
-    .checks-pending { color: #d29922; }
-    .checks-none { color: #484f58; }
-    .mergeable { font-size: 0.8rem; white-space: nowrap; }
-    .mergeable-clean { color: #3fb950; }
-    .mergeable-conflict { color: #f85149; }
-    .mergeable-unknown { color: #8b949e; }
-    .status { font-size: 0.8rem; white-space: nowrap; }
-    .status-open { color: #3fb950; }
-    .status-draft { color: #8b949e; }
+    .repo-group { margin-bottom: 0.9rem; }
+    .repo-title { font-size: 0.8rem; color: var(--text); margin-bottom: 0.4rem; letter-spacing: 0.04em; }
+    .bucket-head { display: grid; grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr 0.7fr 0.5fr; gap: 0.7rem; padding: 0.4rem 0.9rem; border-bottom: 1px solid #000000; font-size: 0.75rem; }
+    .pr-head { display: none; }
+    .pr-row { display: grid; grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr 0.7fr 0.5fr; gap: 0.7rem; padding: 0.45rem 0.2rem; border-bottom: 1px dotted #000000; align-items: center; font-size: 0.8rem; }
+    .pr-row:last-child { border-bottom: none; }
+    .pr-title { display: flex; flex-direction: column; gap: 0.2rem; }
+    .pr-title a { color: var(--text); text-decoration: underline; }
+    .pr-title a:hover { text-decoration: underline; }
+    .pr-meta { color: var(--text); font-size: 0.7rem; }
+    .mono { font-family: inherit; font-size: 0.75rem; }
+    .jira { color: var(--text); text-decoration: underline; }
+    .jira:hover { text-decoration: underline; }
+    .checks { font-size: 0.75rem; white-space: nowrap; }
+    .status-open { color: var(--text); }
+    .status-draft { color: var(--text); }
+    .checks-success { color: var(--text); }
+    .checks-failure { color: var(--text); }
+    .checks-pending { color: var(--text); }
+    .checks-none { color: var(--text); }
+    .mergeable-clean { color: var(--text); }
+    .mergeable-conflict { color: var(--text); }
+    .mergeable-unknown { color: var(--text); }
+    .review-approved { color: var(--text); }
+    .review-changes { color: var(--text); }
+    .review-pending { color: var(--text); }
+    .comment-count { color: var(--text); }
+    .comment-missing { color: var(--text); }
+    .comment-cell { position: relative; }
+    .comment-badge {
+      background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); border-radius: 2px;
+      padding: 0.05rem 0.35rem; font-size: 0.7rem; display: inline-block; font-weight: 600;
+    }
+    .comment-list {
+      display: none; position: absolute; z-index: 10;
+      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 2px;
+      padding: 0.5rem; min-width: 340px; bottom: 120%; left: 0;
+    }
+    .comment-cell:hover .comment-list { display: block; }
+    .comment-item { padding: 0.35rem 0; border-bottom: 1px dotted #000000; }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-item a { color: var(--text); text-decoration: underline; font-size: 0.75rem; }
+    .comment-meta { font-size: 0.65rem; color: var(--text); }
 
     /* Sessions */
     .sessions-cell { position: relative; }
     .session-badge {
-      background: #1f6feb; color: #fff; border-radius: 10px;
-      padding: 0.15rem 0.5rem; font-size: 0.75rem; cursor: pointer;
-      display: inline-block;
+      background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); border-radius: 2px;
+      padding: 0.05rem 0.35rem; font-size: 0.7rem; cursor: pointer;
+      display: inline-block; font-weight: 600;
     }
-    .session-badge-zero { background: #21262d; color: #484f58; cursor: default; }
+    .sessions-none { color: var(--text); font-size: 0.75rem; }
     .session-list {
       display: none; position: absolute; z-index: 10;
-      background: #161b22; border: 1px solid #30363d; border-radius: 8px;
-      padding: 0.5rem; min-width: 320px; top: 100%; left: 0;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 2px;
+      padding: 0.5rem; min-width: 320px; bottom: 120%; left: 0;
+      box-shadow: none;
     }
     .sessions-cell:hover .session-list { display: block; }
-    .session-item { padding: 0.35rem 0; border-bottom: 1px solid #21262d; display: flex; align-items: baseline; gap: 0.5rem; }
+    .session-item { padding: 0.35rem 0; border-bottom: 1px dotted #000000; display: flex; align-items: baseline; gap: 0.5rem; }
     .session-item:last-child { border-bottom: none; }
-    .session-item a { font-size: 0.8rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .session-meta { font-size: 0.7rem; color: #8b949e; white-space: nowrap; }
-    .session-children { color: #8b949e; font-size: 0.7rem; }
-    .sessions-none { color: #484f58; font-size: 0.8rem; }
+    .session-item a { font-size: 0.75rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+    .session-meta { font-size: 0.65rem; color: var(--text); white-space: nowrap; }
+    .session-children { color: var(--text); font-size: 0.65rem; }
     .copy-btn {
-      background: none; border: none; color: #8b949e; cursor: pointer;
-      font-size: 0.7rem; padding: 0 0.2rem; flex-shrink: 0;
+      background: none; border: none; color: var(--text); cursor: pointer;
+      font-size: 0.65rem; padding: 0 0.2rem; flex-shrink: 0;
     }
-    .copy-btn:hover { color: #c9d1d9; }
-    .copy-btn.copied { color: #3fb950; }
+    .copy-btn:hover { color: var(--text); }
+    .copy-btn.copied { color: var(--text); }
 
     /* Loading / error */
-    .loading { display: flex; align-items: center; gap: 0.75rem; padding: 2rem 0; color: #8b949e; font-size: 0.9rem; }
-    .error { color: #f85149; padding: 1rem 0; }
+    .loading { display: flex; align-items: center; gap: 0.75rem; padding: 2rem 0; color: var(--text); font-size: 0.85rem; }
+    .error { color: var(--text); padding: 1rem 0; }
     .spinner {
-      width: 18px; height: 18px; border: 2px solid #30363d; border-top-color: #58a6ff;
+      width: 18px; height: 18px; border: 2px solid var(--panel-border); border-top-color: var(--text);
       border-radius: 50%; animation: spin 0.8s linear infinite; display: inline-block;
     }
     .spinner-sm { width: 12px; height: 12px; border-width: 1.5px; vertical-align: middle; margin-right: 4px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 980px) {
+      .filters { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .bucket-head { grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr; }
+      .pr-row { grid-template-columns: 1.8fr 1fr 1fr 0.7fr 0.7fr; }
+      .pr-row .hide-md { display: none; }
+    }
+    @media (max-width: 720px) {
+      .filters { grid-template-columns: 1fr; }
+      body { padding: 1.5rem; }
+      .header { flex-direction: column; align-items: flex-start; }
+      .pr-row { grid-template-columns: 1fr; gap: 0.4rem; }
+      .pr-row > div { display: flex; justify-content: space-between; }
+      .pr-row .pr-title { align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>PR Dashboard</h1>
+    <div>
+      <h1>PR Dashboard</h1>
+      <div class="tagline">Triage by urgency, ticket, and repo</div>
+    </div>
     <div class="refresh-bar">
       <span id="refresh-status">Loading...</span>
       <button id="refresh-btn" disabled>Refresh</button>
@@ -118,6 +191,11 @@
       <input type="text" name="exclude" placeholder="endpoint audit, loki" /></label>
     <label>Filter by repo
       <input type="text" name="repo" placeholder="e.g. frontend" /></label>
+    <label>Group by
+      <select name="group">
+        <option value="ticket">Ticket</option>
+        <option value="repo">Repo</option>
+      </select></label>
     <label>Drafts
       <select name="drafts">
         <option value="exclude">Exclude drafts</option>
@@ -182,20 +260,29 @@
       return '<span class="checks ' + m.cls + '">' + m.label + '</span>';
     }
 
+    function pipelineLabel(state, url) {
+      var label = state === "FAILURE" ? "Failing" : state === "SUCCESS" ? "Passing" : state === "PENDING" ? "Pending" : "--";
+      var cls = state === "FAILURE" ? "checks-failure" : state === "SUCCESS" ? "checks-success" : state === "PENDING" ? "checks-pending" : "checks-none";
+      if (url) {
+        return '<a class="checks ' + cls + '" href="' + url + '" target="_blank">' + label + '</a>';
+      }
+      return '<span class="checks ' + cls + '">' + label + '</span>';
+    }
+
     function statusLabel(isDraft) {
       return isDraft
-        ? '<span class="status status-draft">Draft</span>'
-        : '<span class="status status-open">Open</span>';
+        ? '<span class="status-draft">Draft</span>'
+        : '<span class="status-open">Open</span>';
     }
 
     function mergeableLabel(state) {
       if (state === "CONFLICTING") {
-        return '<span class="mergeable mergeable-conflict">Yes</span>';
+        return '<span class="mergeable-conflict">Conflict</span>';
       }
       if (state === "MERGEABLE") {
-        return '<span class="mergeable mergeable-clean">No</span>';
+        return '<span class="mergeable-clean">Clear</span>';
       }
-      return '<span class="mergeable mergeable-unknown">Unknown</span>';
+      return '<span class="mergeable-unknown">Unknown</span>';
     }
 
     function jiraCell(ticket) {
@@ -233,6 +320,70 @@
       return '<div class="sessions-cell">' + badge + '<div class="session-list">' + items + more + '</div></div>';
     }
 
+    function commentCell(threads) {
+      if (!threads || !threads.length) {
+        return '<span class="sessions-none">--</span>';
+      }
+      var badge = '<span class="comment-badge">' + threads.length + '</span>';
+      var items = threads.slice(0, 8).map(function(t) {
+        var snippet = truncate(t.bodyText || "", 60);
+        var replied = t.replied ? "replied" : "no reply";
+        return '<div class="comment-item">' +
+          '<a href="' + escapeHtml(t.url) + '" target="_blank">' + escapeHtml(t.authorLogin) + ': ' + escapeHtml(snippet) + '</a>' +
+          '<div class="comment-meta">' + timeAgo(t.createdAt) + ' • ' + replied + '</div>' +
+        '</div>';
+      }).join('');
+      var more = threads.length > 8 ? '<div class="comment-meta" style="padding:0.3rem 0">+' + (threads.length - 8) + ' more</div>' : '';
+      return '<div class="comment-cell">' + badge + '<div class="comment-list">' + items + more + '</div></div>';
+    }
+
+    function reviewLabel(state) {
+      if (state === "CHANGES_REQUESTED") return '<span class="review-changes">Changes</span>';
+      if (state === "APPROVED") return '<span class="review-approved">Approved</span>';
+      return '<span class="review-pending">Pending</span>';
+    }
+
+    function isDraftOrTodo(pr) {
+      if (pr.isDraft) return true;
+      return /\b(WIP|TODO)\b/i.test(pr.title || "");
+    }
+
+    function groupBy(items, keyFn) {
+      var map = new Map();
+      items.forEach(function(item) {
+        var key = keyFn(item);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(item);
+      });
+      return map;
+    }
+
+    function sortByUpdatedDesc(items) {
+      return items.sort(function(a, b) {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      });
+    }
+
+    function bucketize(prs) {
+      var buckets = {
+        now: [],
+        today: [],
+        drafts: []
+      };
+      prs.forEach(function(pr) {
+        if (isDraftOrTodo(pr)) {
+          buckets.drafts.push(pr);
+          return;
+        }
+        if (pr.unresolvedCount > 0) {
+          buckets.now.push(pr);
+          return;
+        }
+        buckets.today.push(pr);
+      });
+      return buckets;
+    }
+
     function copyToClipboard(text) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         return navigator.clipboard.writeText(text);
@@ -257,28 +408,143 @@
 
     // --- Rendering ---
 
-    function renderTable(prs) {
+    function renderBucket(title, prs) {
+      var total = prs.length;
+      if (!total) return '';
+      var groupedTickets = groupBy(prs, function(pr) { return pr.jiraTicket || "No ticket"; });
+      var ticketEntries = Array.from(groupedTickets.entries()).sort(function(a, b) {
+        var aKey = a[0];
+        var bKey = b[0];
+        if (aKey === "No ticket" && bKey !== "No ticket") return 1;
+        if (bKey === "No ticket" && aKey !== "No ticket") return -1;
+        return aKey.localeCompare(bKey);
+      });
+      var ticketBlocks = '';
+
+      ticketEntries.forEach(function(entry) {
+        var ticket = entry[0];
+        var ticketPrs = entry[1];
+        var repoGroups = groupBy(ticketPrs, function(pr) { return pr.repository.name; });
+        var latest = sortByUpdatedDesc(ticketPrs.slice())[0];
+        var ticketLink = ticket === "No ticket" ? '<span class="ticket-title">No ticket</span>' : '<span class="ticket-title">' + jiraCell(ticket) + '</span>';
+
+        var repoBlocks = '';
+        repoGroups.forEach(function(repoPrs, repo) {
+          repoBlocks += '<div class="repo-group">' +
+            '<div class="repo-title">' + repo + ' • ' + repoPrs.length + ' PR' + (repoPrs.length === 1 ? '' : 's') + '</div>' +
+            repoPrs.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); }).map(function(pr) {
+              return '<div class="pr-row">' +
+                '<div class="pr-title">' +
+                  '<a href="' + pr.url + '" target="_blank">#' + pr.number + ' ' + escapeHtml(pr.title) + '</a>' +
+                  '<div class="pr-meta">' + statusLabel(pr.isDraft) + ' • ' + timeAgo(pr.updatedAt) + '</div>' +
+                '</div>' +
+                '<div class="mono">' + reviewLabel(pr.reviewState) + '</div>' +
+                '<div class="mono">' + pipelineLabel(pr.pipelineState, pr.pipelineUrl) + '</div>' +
+                '<div class="mono">' + mergeableLabel(pr.mergeable) + '</div>' +
+                '<div class="mono">' + commentCell(pr.unresolvedThreads) + '</div>' +
+                '<div class="mono hide-md">' + (pr.jiraTicket ? jiraCell(pr.jiraTicket) : '--') + '</div>' +
+                '<div class="mono">' + sessionsCell(pr.sessions) + '</div>' +
+              '</div>';
+            }).join('') +
+          '</div>';
+        });
+
+        ticketBlocks += '<div class="ticket">' +
+          '<div class="ticket-header">' +
+            '<div class="ticket-meta">' + ticketLink +
+              '<span class="pill">' + ticketPrs.length + ' PR' + (ticketPrs.length === 1 ? '' : 's') + '</span>' +
+              '<span class="pill">latest ' + timeAgo(latest.updatedAt) + '</span>' +
+            '</div>' +
+            '<div class="ticket-badges"></div>' +
+          '</div>' +
+          repoBlocks +
+        '</div>';
+      });
+
+      return '<div class="bucket">' +
+        '<div class="bucket-header">' +
+          '<div class="bucket-title">' + title + '</div>' +
+          '<div class="bucket-meta">' + total + ' PR' + (total === 1 ? '' : 's') + '</div>' +
+        '</div>' +
+        '<div class="bucket-head">' +
+          '<div>PR</div>' +
+          '<div>Review</div>' +
+          '<div>Pipeline</div>' +
+          '<div>Conflicts</div>' +
+          '<div>Unresolved</div>' +
+          '<div class="hide-md">Ticket</div>' +
+          '<div>Sessions</div>' +
+        '</div>' +
+        ticketBlocks +
+      '</div>';
+    }
+
+    function renderBucketByRepo(title, prs) {
+      var total = prs.length;
+      if (!total) return '';
+      var groupedRepos = groupBy(prs, function(pr) { return pr.repository.name; });
+      var repoEntries = Array.from(groupedRepos.entries()).sort(function(a, b) {
+        return a[0].localeCompare(b[0]);
+      });
+      var repoBlocks = '';
+
+      repoEntries.forEach(function(entry) {
+        var repo = entry[0];
+        var repoPrs = entry[1];
+        repoBlocks += '<div class="ticket">' +
+          '<div class="repo-title">' + repo + ' • ' + repoPrs.length + ' PR' + (repoPrs.length === 1 ? '' : 's') + '</div>' +
+          repoPrs.sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); }).map(function(pr) {
+            return '<div class="pr-row">' +
+              '<div class="pr-title">' +
+                '<a href="' + pr.url + '" target="_blank">#' + pr.number + ' ' + escapeHtml(pr.title) + '</a>' +
+                '<div class="pr-meta">' + statusLabel(pr.isDraft) + ' • ' + timeAgo(pr.updatedAt) + '</div>' +
+              '</div>' +
+              '<div class="mono">' + reviewLabel(pr.reviewState) + '</div>' +
+              '<div class="mono">' + pipelineLabel(pr.pipelineState, pr.pipelineUrl) + '</div>' +
+              '<div class="mono">' + mergeableLabel(pr.mergeable) + '</div>' +
+              '<div class="mono">' + commentCell(pr.unresolvedThreads) + '</div>' +
+              '<div class="mono hide-md">' + (pr.jiraTicket ? jiraCell(pr.jiraTicket) : '--') + '</div>' +
+              '<div class="mono">' + sessionsCell(pr.sessions) + '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>';
+      });
+
+      return '<div class="bucket">' +
+        '<div class="bucket-header">' +
+          '<div class="bucket-title">' + title + '</div>' +
+          '<div class="bucket-meta">' + total + ' PR' + (total === 1 ? '' : 's') + '</div>' +
+        '</div>' +
+        '<div class="bucket-head">' +
+          '<div>PR</div>' +
+          '<div>Review</div>' +
+          '<div>Pipeline</div>' +
+          '<div>Conflicts</div>' +
+          '<div>Unresolved</div>' +
+          '<div class="hide-md">Ticket</div>' +
+          '<div>Sessions</div>' +
+        '</div>' +
+        repoBlocks +
+      '</div>';
+    }
+
+    function renderBuckets(prs) {
       if (!prs.length) {
         content.innerHTML = '<p class="count">No PRs match filters</p>';
         return;
       }
-      var head = '<thead><tr><th>#</th><th>Sessions</th><th>Repo</th><th>Title</th><th>Jira</th><th>Checks</th><th>Conflicts</th><th>Status</th><th>Updated</th></tr></thead>';
-      var rows = prs.map(function(pr) {
-        return '<tr>' +
-          '<td><a href="' + pr.url + '" target="_blank">#' + pr.number + '</a></td>' +
-          '<td>' + sessionsCell(pr.sessions) + '</td>' +
-          '<td class="repo">' + pr.repository.name + '</td>' +
-          '<td>' + pr.title + '</td>' +
-          '<td>' + jiraCell(pr.jiraTicket) + '</td>' +
-          '<td>' + checksLabel(pr.checks) + '</td>' +
-          '<td>' + mergeableLabel(pr.mergeable) + '</td>' +
-          '<td>' + statusLabel(pr.isDraft) + '</td>' +
-          '<td class="date">' + timeAgo(pr.updatedAt) + '</td>' +
-          '</tr>';
-      }).join("");
-      content.innerHTML =
-        '<p class="count">' + prs.length + ' PR' + (prs.length === 1 ? '' : 's') + '</p>' +
-        '<table>' + head + '<tbody>' + rows + '</tbody></table>';
+      var groupMode = form.elements.group ? form.elements.group.value : "ticket";
+      var renderFn = groupMode === "repo" ? renderBucketByRepo : renderBucket;
+      var buckets = bucketize(prs);
+      var html = '';
+      html += renderFn('Address Now', buckets.now);
+      html += renderFn('Address Today', buckets.today);
+      html += renderFn('Drafts / TODOs', buckets.drafts);
+      if (!html) {
+        content.innerHTML = '<p class="count">No PRs match filters</p>';
+        return;
+      }
+      content.innerHTML = '<p class="count">' + prs.length + ' PR' + (prs.length === 1 ? '' : 's') + '</p>' + html;
     }
 
     // --- Refresh status ---
@@ -300,7 +566,7 @@
         var data = await res.json();
         lastRefreshed = data.lastRefreshed;
         updateRefreshLabel();
-        renderTable(data.prs);
+        renderBuckets(data.prs);
       } catch (e) {
         content.innerHTML = '<p class="error">Error: ' + e.message + '</p>';
       }
