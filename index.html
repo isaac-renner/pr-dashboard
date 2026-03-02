@@ -113,16 +113,16 @@
     .comment-list {
       display: none; position: absolute; z-index: 10;
       background: var(--panel); border: 1px solid var(--panel-border); border-radius: 2px;
-      padding: 0.5rem; min-width: 340px; bottom: 120%; left: 0;
+      padding: 0.5rem; min-width: 340px; bottom: 120%; right: 0; left: auto; margin-bottom: 6px;
     }
-    .comment-cell:hover .comment-list { display: block; }
+    .comment-cell.open .comment-list { display: block; }
     .comment-item { padding: 0.35rem 0; border-bottom: 1px dotted #000000; }
     .comment-item:last-child { border-bottom: none; }
     .comment-item a { color: var(--text); text-decoration: underline; font-size: 0.75rem; }
     .comment-meta { font-size: 0.65rem; color: var(--text); }
 
     /* Sessions */
-    .sessions-cell { position: relative; }
+    .sessions-cell { position: relative; padding-bottom: 0.2rem; }
     .session-badge {
       background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); border-radius: 2px;
       padding: 0.05rem 0.35rem; font-size: 0.7rem; cursor: pointer;
@@ -132,10 +132,10 @@
     .session-list {
       display: none; position: absolute; z-index: 10;
       background: var(--panel); border: 1px solid var(--panel-border); border-radius: 2px;
-      padding: 0.5rem; min-width: 320px; bottom: 120%; left: 0;
+      padding: 0.5rem; min-width: 320px; bottom: 120%; right: 0; left: auto; margin-bottom: 6px;
       box-shadow: none;
     }
-    .sessions-cell:hover .session-list { display: block; }
+    .sessions-cell.open .session-list { display: block; }
     .session-item { padding: 0.35rem 0; border-bottom: 1px dotted #000000; display: flex; align-items: baseline; gap: 0.5rem; }
     .session-item:last-child { border-bottom: none; }
     .session-item a { font-size: 0.75rem; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
@@ -587,6 +587,41 @@
     // --- Events ---
 
     document.addEventListener("click", function(e) {
+      var commentToggle = e.target.closest(".comment-badge");
+      var sessionToggle = e.target.closest(".session-badge");
+      var inCommentList = e.target.closest(".comment-list");
+      var inSessionList = e.target.closest(".session-list");
+      var commentCell = commentToggle ? commentToggle.closest(".comment-cell") : null;
+      var sessionCell = sessionToggle ? sessionToggle.closest(".sessions-cell") : null;
+
+      if (commentToggle && commentCell) {
+        e.preventDefault();
+        document.querySelectorAll(".comment-cell.open").forEach(function(el) {
+          if (el !== commentCell) el.classList.remove("open");
+        });
+        commentCell.classList.toggle("open");
+        return;
+      }
+      if (sessionToggle && sessionCell) {
+        e.preventDefault();
+        document.querySelectorAll(".sessions-cell.open").forEach(function(el) {
+          if (el !== sessionCell) el.classList.remove("open");
+        });
+        sessionCell.classList.toggle("open");
+        return;
+      }
+
+      if (!inCommentList) {
+        document.querySelectorAll(".comment-cell.open").forEach(function(el) {
+          el.classList.remove("open");
+        });
+      }
+      if (!inSessionList) {
+        document.querySelectorAll(".sessions-cell.open").forEach(function(el) {
+          el.classList.remove("open");
+        });
+      }
+
       var btn = e.target.closest(".copy-btn");
       if (!btn) return;
       e.preventDefault();
@@ -601,6 +636,16 @@
           setTimeout(function() { btn.textContent = "copy"; }, 1500);
         });
       }
+    });
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key !== "Escape") return;
+      document.querySelectorAll(".comment-cell.open").forEach(function(el) {
+        el.classList.remove("open");
+      });
+      document.querySelectorAll(".sessions-cell.open").forEach(function(el) {
+        el.classList.remove("open");
+      });
     });
 
     refreshBtn.addEventListener("click", manualRefresh);
