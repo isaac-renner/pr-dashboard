@@ -58,48 +58,46 @@ export function ChipFilterPopover({
     : label;
 
   return (
-    <div className="repo-filter" ref={containerRef}>
+    <div className="popover-anchor" ref={containerRef}>
       <button
         ref={triggerRef}
-        className={`repo-filter-trigger${selected.length > 0 ? " active" : ""}`}
+        className={selected.length > 0 ? "inverted" : undefined}
         onClick={() => setOpen((o) => !o)}
         type="button"
+        style={{ width: "auto", minWidth: "12ch" }}
       >
         {displayLabel}
       </button>
 
       {open && (
-        <div className="repo-filter-popover">
+        <div className="popover">
           <input
             ref={inputRef}
             type="text"
-            className="repo-filter-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`filter ${label.toLowerCase()}...`}
           />
-          <div className="repo-filter-list">
+          <div className="flex-wrap gap-0">
             {filtered.map((option) => (
               <button
                 key={option}
-                className={`repo-chip${selected.includes(option) ? " active" : ""}`}
+                className={`chip${selected.includes(option) ? " active" : ""}`}
                 onClick={() => onToggle(option)}
                 type="button"
               >
                 {option}
               </button>
             ))}
-            {filtered.length === 0 && (
-              <div className="repo-filter-empty">No matches</div>
-            )}
+            {filtered.length === 0 && <span className="muted">No matches</span>}
           </div>
           {selected.length > 0 && (
             <button
-              className="repo-filter-clear"
+              className="chip muted"
               onClick={onClear}
               type="button"
             >
-              Clear selection
+              clear
             </button>
           )}
         </div>

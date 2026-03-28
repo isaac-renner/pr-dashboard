@@ -27,127 +27,76 @@ export function PRRow({ pr }: PRRowProps) {
     };
   }, []);
 
-  // --- Pipeline ---
-  const pipelineLabel = pr.pipelineState === "FAILURE"
-    ? "Failing"
-    : pr.pipelineState === "SUCCESS"
-    ? "Passing"
-    : pr.pipelineState === "PENDING"
-    ? "Pending"
+  const pipelineLabel = pr.pipelineState === "FAILURE" ? "Failing"
+    : pr.pipelineState === "SUCCESS" ? "Passing"
+    : pr.pipelineState === "PENDING" ? "Pending"
     : "--";
-  const pipelineCls = pr.pipelineState === "FAILURE"
-    ? "checks-failure"
-    : pr.pipelineState === "SUCCESS"
-    ? "checks-success"
-    : pr.pipelineState === "PENDING"
-    ? "checks-pending"
-    : "checks-none";
 
-  // --- Review ---
-  const reviewLabel = pr.reviewState === "CHANGES_REQUESTED"
-    ? "Changes"
-    : pr.reviewState === "APPROVED"
-    ? "Approved"
+  const reviewLabel = pr.reviewState === "CHANGES_REQUESTED" ? "Changes"
+    : pr.reviewState === "APPROVED" ? "Approved"
     : "Pending";
-  const reviewCls = pr.reviewState === "CHANGES_REQUESTED"
-    ? "review-changes"
-    : pr.reviewState === "APPROVED"
-    ? "review-approved"
-    : "review-pending";
 
-  // --- Mergeable ---
-  const mergeLabel = pr.mergeable === "CONFLICTING"
-    ? "Conflict"
-    : pr.mergeable === "MERGEABLE"
-    ? "Clear"
+  const mergeLabel = pr.mergeable === "CONFLICTING" ? "Conflict"
+    : pr.mergeable === "MERGEABLE" ? "Clear"
     : "Unknown";
-  const mergeCls = pr.mergeable === "CONFLICTING"
-    ? "mergeable-conflict"
-    : pr.mergeable === "MERGEABLE"
-    ? "mergeable-clean"
-    : "mergeable-unknown";
 
   return (
-    <div className="pr-row">
+    <div className="pr-grid pr-row">
       {/* PR title + meta */}
-      <div className="pr-title">
+      <div>
         <a href={pr.url} target="_blank" rel="noreferrer">
           #{pr.number} {pr.title}
         </a>
-        <div className="pr-meta">
-          {pr.headRefName}
-          {" • "}
-          <span className={pr.isDraft ? "status-draft" : "status-open"}>
-            {pr.isDraft ? "Draft" : "Open"}
-          </span>
-          {" • "}
-          {timeAgo(pr.updatedAt)}
+        <div className="muted">
+          {pr.headRefName} · {pr.isDraft ? "Draft" : "Open"} · {timeAgo(pr.updatedAt)}
         </div>
       </div>
 
       {/* Review */}
-      <div className="mono">
-        <span className="m-label">Review</span>
-        <span className={reviewCls}>{reviewLabel}</span>
-      </div>
+      <div>{reviewLabel}</div>
 
       {/* Pipeline */}
-      <div className="mono">
-        <span className="m-label">Pipeline</span>
-        <span>
-          {pr.pipelineUrl
-            ? (
-              <a className={`checks ${pipelineCls}`} href={pr.pipelineUrl} target="_blank" rel="noreferrer">
-                {pipelineLabel}
-              </a>
-            )
-            : <span className={`checks ${pipelineCls}`}>{pipelineLabel}</span>}
-        </span>
+      <div>
+        {pr.pipelineUrl
+          ? <a href={pr.pipelineUrl} target="_blank" rel="noreferrer">{pipelineLabel}</a>
+          : pipelineLabel}
       </div>
 
       {/* Conflicts */}
-      <div className="mono">
-        <span className="m-label">Conflicts</span>
-        <span className={mergeCls}>{mergeLabel}</span>
-      </div>
+      <div>{mergeLabel}</div>
 
       {/* Comments */}
-      <div className="mono">
-        <span className="m-label">Comments</span>
-        <span>
-          {pr.unresolvedThreads.length > 0
-            ? (
-              <div className={`comment-cell${commentsOpen ? " open" : ""}`} ref={commentsRef}>
-                <span
-                  className="comment-badge"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCommentsOpen((o) => !o);
-                  }}
-                >
-                  {pr.unresolvedThreads.length}
-                </span>
-                <div className="comment-list">
+      <div>
+        {pr.unresolvedThreads.length > 0
+          ? (
+            <div className="popover-anchor" ref={commentsRef}>
+              <button
+                className="chip"
+                onClick={(e) => { e.stopPropagation(); setCommentsOpen((o) => !o); }}
+                type="button"
+              >
+                {pr.unresolvedThreads.length}
+              </button>
+              {commentsOpen && (
+                <div className="popover">
                   {pr.unresolvedThreads.slice(0, 8).map((t) => (
-                    <div key={t.id} className="comment-item">
+                    <div key={t.id} style={{ borderBottom: "1px dotted var(--border-color)", padding: "calc(var(--line-height) / 2) 0" }}>
                       <a href={t.url} target="_blank" rel="noreferrer">
                         {t.authorLogin}: {truncate(t.bodyText, 60)}
                       </a>
-                      <div className="comment-meta">
-                        {timeAgo(t.createdAt)} • {t.replied ? "replied earlier" : "unaddressed"}
+                      <div className="muted">
+                        {timeAgo(t.createdAt)} · {t.replied ? "replied" : "unaddressed"}
                       </div>
                     </div>
                   ))}
                   {pr.unresolvedThreads.length > 8 && (
-                    <div className="comment-meta" style={{ padding: "0.3rem 0" }}>
-                      +{pr.unresolvedThreads.length - 8} more
-                    </div>
+                    <div className="muted">+{pr.unresolvedThreads.length - 8} more</div>
                   )}
                 </div>
-              </div>
-            )
-            : <span className="sessions-none">--</span>}
-        </span>
+              )}
+            </div>
+          )
+          : <span className="muted">--</span>}
       </div>
     </div>
   );

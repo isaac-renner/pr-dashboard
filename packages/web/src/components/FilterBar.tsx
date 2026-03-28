@@ -26,35 +26,27 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
   const searchVal = search._tag === "Some" ? search.value : "";
   const groupVal = group._tag === "Some" ? group.value : "ticket";
 
-  function toggleRepo(repo: string) {
-    setSelectedRepos((current) =>
-      current.includes(repo)
-        ? current.filter((r) => r !== repo)
-        : [...current, repo]
+  function toggleItem(
+    set: (fn: (c: ReadonlyArray<string>) => ReadonlyArray<string>) => void,
+    value: string,
+  ) {
+    set((current) =>
+      current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
     );
   }
 
-  function togglePipeline(pipeline: string) {
-    setSelectedPipelines((current) =>
-      current.includes(pipeline)
-        ? current.filter((p) => p !== pipeline)
-        : [...current, pipeline]
-    );
+  function removeItem(
+    set: (fn: (c: ReadonlyArray<string>) => ReadonlyArray<string>) => void,
+    value: string,
+  ) {
+    set((current) => current.filter((v) => v !== value));
   }
 
-  function removeRepo(repo: string) {
-    setSelectedRepos((current) => current.filter((r) => r !== repo));
-  }
-
-  function removePipeline(pipeline: string) {
-    setSelectedPipelines((current) => current.filter((p) => p !== pipeline));
-  }
-
-  const hasActiveFilters = selectedRepos.length > 0 || selectedPipelines.length > 0;
+  const hasActive = selectedRepos.length > 0 || selectedPipelines.length > 0;
 
   return (
     <>
-      <div className="filters">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "1ch", alignItems: "end" }}>
         <label>
           Search
           <input
@@ -62,9 +54,7 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
             type="text"
             value={searchVal}
             onChange={(e) => setSearch(Option.some(e.target.value))}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
             placeholder="fuzzy search PRs..."
           />
         </label>
@@ -73,7 +63,7 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
           label="Repos"
           options={[...availableRepos]}
           selected={[...selectedRepos]}
-          onToggle={toggleRepo}
+          onToggle={(v) => toggleItem(setSelectedRepos, v)}
           onClear={() => setSelectedRepos([])}
           triggerRef={repoFilterRef}
         />
@@ -94,33 +84,31 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
           label="Pipeline"
           options={PIPELINE_OPTIONS}
           selected={[...selectedPipelines]}
-          onToggle={togglePipeline}
+          onToggle={(v) => toggleItem(setSelectedPipelines, v)}
           onClear={() => setSelectedPipelines([])}
         />
       </div>
 
-      {hasActiveFilters && (
-        <div className="active-filters">
+      {hasActive && (
+        <div className="flex-wrap gap-0" style={{ marginTop: "calc(var(--line-height) / 2)" }}>
           {selectedRepos.map((repo) => (
             <button
               key={`repo:${repo}`}
-              className="active-filter-tag"
-              onClick={() => removeRepo(repo)}
+              className="chip"
+              onClick={() => removeItem(setSelectedRepos, repo)}
               type="button"
             >
-              {repo}
-              <span className="active-filter-tag-x">×</span>
+              {repo} ×
             </button>
           ))}
           {selectedPipelines.map((p) => (
             <button
               key={`pipeline:${p}`}
-              className="active-filter-tag"
-              onClick={() => removePipeline(p)}
+              className="chip"
+              onClick={() => removeItem(setSelectedPipelines, p)}
               type="button"
             >
-              {p}
-              <span className="active-filter-tag-x">×</span>
+              {p} ×
             </button>
           ))}
         </div>

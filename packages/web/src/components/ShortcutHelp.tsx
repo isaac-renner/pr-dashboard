@@ -11,24 +11,24 @@ export function ShortcutHelp({ open, onClose, shortcuts }: ShortcutHelpProps) {
   if (!open) return null;
 
   return (
-    <div className="shortcut-overlay" onClick={onClose}>
-      <div className="shortcut-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="shortcut-modal-header">
+    <div className="overlay" onClick={onClose}>
+      <div className="overlay-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="panel-header">
           <span>Keyboard Shortcuts</span>
-          <button onClick={onClose} className="shortcut-close">Esc</button>
+          <kbd>Esc</kbd>
         </div>
-        <div className="shortcut-list">
+        <div className="panel-body">
           {shortcuts.map((s) => (
-            <div key={s.keys} className="shortcut-row">
-              <span className="shortcut-keys">
+            <div key={s.keys} className="flex-between" style={{ padding: "calc(var(--line-height) / 2) 0", borderBottom: "1px dotted var(--border-color)" }}>
+              <span>
                 {formatKeys(s.keys).split(" ").map((k, i) => (
                   <React.Fragment key={i}>
-                    {i > 0 && <span className="shortcut-then"> then </span>}
+                    {i > 0 && <span className="muted"> then </span>}
                     <kbd>{k}</kbd>
                   </React.Fragment>
                 ))}
               </span>
-              <span className="shortcut-desc">{s.label}</span>
+              <span className="muted">{s.label}</span>
             </div>
           ))}
         </div>

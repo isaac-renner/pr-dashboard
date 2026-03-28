@@ -52,7 +52,7 @@ body {
   color: var(--text);
   padding: calc(var(--line-height) * 2) 2ch;
   min-height: 100vh;
-  max-width: min(120ch, 100%);
+  max-width: min(120ch, round(down, 100%, 1ch));
   font-variant-numeric: tabular-nums lining-nums;
 }
 
@@ -400,6 +400,55 @@ details[open] > summary::before {
 }
 
 .gap-0 > * + * { margin-top: 0; }
+
+/* ── PR Grid (CSS Grid for responsive collapsing) ── */
+
+.pr-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr 1fr 1fr 1fr;
+  gap: 0 1ch;
+  align-items: baseline;
+}
+
+.pr-grid-header {
+  font-weight: 600;
+  border-bottom: var(--border) solid var(--border-color);
+  padding: calc(var(--line-height) / 2) 1ch;
+}
+
+.pr-grid-header > * + * {
+  margin-top: 0;
+}
+
+.pr-row {
+  padding: calc(var(--line-height) / 2) 1ch;
+  border-bottom: 1px dotted var(--border-color);
+}
+
+.pr-row:last-child {
+  border-bottom: none;
+}
+
+.pr-row > * {
+  margin-top: 0;
+}
+
+.pr-row > *:first-child > * + * {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .pr-grid {
+    grid-template-columns: 1fr;
+  }
+  .pr-grid-header {
+    display: none;
+  }
+  .pr-row {
+    border: var(--border) solid var(--border-color);
+    margin-bottom: var(--line-height);
+  }
+}
 
 /* ── Responsive ── */
 

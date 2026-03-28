@@ -9,6 +9,7 @@ import { timeAgo } from "../lib/format.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
 import { FilterBar } from "./FilterBar.js";
+import { FloatingBar } from "./FloatingBar.js";
 import { PRList } from "./PRList.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
 
@@ -27,12 +28,9 @@ export function App() {
   const repoFilterRef = useRef<HTMLButtonElement>(null);
 
   const shortcuts: ReadonlyArray<ShortcutDef> = useMemo(() => [
-    // Grouping
     { keys: "g r", label: "Group by repo", action: () => setGroup(Option.some("repo")) },
     { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
     { keys: "g s", label: "Group by stack", action: () => setGroup(Option.some("stack")) },
-
-    // Filters
     { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },
     { keys: "f r", label: "Open repo filter", action: () => repoFilterRef.current?.click() },
     {
@@ -44,8 +42,6 @@ export function App() {
         setSelectedPipelines([]);
       },
     },
-
-    // Help
     { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
     { keys: "Escape", label: "Close overlay", action: () => setHelpOpen(false), enableInInputs: true },
   ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines]);
@@ -57,50 +53,34 @@ export function App() {
 
   return (
     <>
-      <div className="header">
-        <div>
-          <h1>PR Dashboard</h1>
-          <div className="tagline">
-            {pending ? <span className="chord-pending">waiting: {pending}...</span> : null}
-          </div>
-        </div>
-        <div className="refresh-bar">
-          <span>
-            {loading && !prs.length
-              ? (
-                <span className="refreshing">
-                  <span className="spinner spinner-sm" />
-                  Loading...
-                </span>
-              )
-              : lastRefreshed
-              ? `Updated ${timeAgo(lastRefreshed)}`
-              : null}
-          </span>
-        </div>
+      <div className="flex-between">
+        <h1>PR Dashboard</h1>
+        <span className="muted">
+          {loading && !prs.length
+            ? <><span className="spinner" /> Loading...</>
+            : lastRefreshed
+            ? `Updated ${timeAgo(lastRefreshed)}`
+            : null}
+        </span>
       </div>
 
       <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} />
 
-      <div id="content">
-        {loading && !prs.length && (
-          <div className="loading">
-            <div className="spinner" />
-            Loading...
+      {loading && !prs.length && (
+        <div><span className="spinner" /> Loading...</div>
+      )}
+      {error && <div>Error: {error}</div>}
+      {prs.length > 0 && (
+        <>
+          <div className="muted">
+            {filtered.length} PR{filtered.length === 1 ? "" : "s"}
           </div>
-        )}
-        {error && <div className="error">Error: {error}</div>}
-        {prs.length > 0 && (
-          <>
-            <p className="count">
-              {filtered.length} PR{filtered.length === 1 ? "" : "s"}
-            </p>
-            <PRList />
-          </>
-        )}
-        {!loading && !error && prs.length === 0 && <p className="count">No PRs found</p>}
-      </div>
+          <PRList />
+        </>
+      )}
+      {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
 
+      <FloatingBar pending={pending} shortcuts={shortcuts} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
     </>
   );
