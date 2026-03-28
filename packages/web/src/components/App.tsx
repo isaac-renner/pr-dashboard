@@ -2,7 +2,7 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useMemo, useRef, useState } from "react";
-import { filteredPrsAtom } from "../atoms/derived.js";
+import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { selectedIndexAtom } from "../atoms/selection.js";
@@ -17,6 +17,7 @@ export function App() {
   const response = useAtomValue(prsResponseAtom);
   const prs = useAtomValue(prsAtom);
   const filtered = useAtomValue(filteredPrsAtom);
+  const displayOrder = useAtomValue(displayOrderAtom);
   const selectedIndex = useAtomValue(selectedIndexAtom);
   const setSelectedIndex = useAtomSet(selectedIndexAtom);
   const setGroup = useAtomSet(groupAtom);
@@ -33,7 +34,7 @@ export function App() {
     {
       keys: "j",
       label: "Move down",
-      action: () => setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1)),
+      action: () => setSelectedIndex((i) => Math.min(i + 1, displayOrder.length - 1)),
     },
     {
       keys: "k",
@@ -44,8 +45,8 @@ export function App() {
       keys: "o",
       label: "Open PR",
       action: () => {
-        if (selectedIndex >= 0 && selectedIndex < filtered.length) {
-          window.open(filtered[selectedIndex]!.url, "_blank");
+        if (selectedIndex >= 0 && selectedIndex < displayOrder.length) {
+          window.open(displayOrder[selectedIndex]!.url, "_blank");
         }
       },
     },
@@ -80,7 +81,7 @@ export function App() {
         setSelectedIndex(-1);
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedIndex, filtered, selectedIndex]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedIndex, displayOrder, selectedIndex]);
 
   const pending = useShortcuts(shortcuts);
 

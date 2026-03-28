@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import React from "react";
-import { filteredPrsAtom } from "../atoms/derived.js";
+import { displayOrderAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
 import { selectedIndexAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
@@ -13,7 +13,7 @@ interface FloatingBarProps {
 export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
   const filters = useAtomValue(filtersAtom);
   const selectedIndex = useAtomValue(selectedIndexAtom);
-  const filtered = useAtomValue(filteredPrsAtom);
+  const displayOrder = useAtomValue(displayOrderAtom);
 
   const groupLabel = filters.group === "stack" ? "STACK"
     : filters.group === "repo" ? "REPO"
@@ -46,8 +46,8 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
 
   // Default: show common shortcuts + mode
   const position = selectedIndex >= 0
-    ? `${selectedIndex + 1}/${filtered.length}`
-    : `${filtered.length} PRs`;
+    ? `${selectedIndex + 1}/${displayOrder.length}`
+    : `${displayOrder.length} PRs`;
 
   return (
     <div className="floating-bar">

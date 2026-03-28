@@ -313,7 +313,8 @@ kbd {
   border: var(--border) solid var(--border-color);
   padding: 0;
   min-width: 40ch;
-  max-width: 60ch;
+  max-width: 80ch;
+  width: round(down, 80ch, 1ch);
   max-height: calc(var(--line-height) * 30);
   overflow-y: auto;
 }
@@ -446,6 +447,10 @@ details[open] > summary::before {
 
 .pr-row {
   border-bottom: var(--border) dashed var(--border-color);
+  margin-left: -1ch;
+  margin-right: -1ch;
+  padding-left: 2ch;
+  padding-right: 2ch;
 }
 
 .pr-row:last-child {

@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import React, { useMemo } from "react";
-import { filteredPrsAtom } from "../atoms/derived.js";
+import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
 import { groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
 import { timeAgo } from "../lib/format.js";
@@ -55,12 +55,14 @@ export function PRList() {
     ? groupByTicket(filtered)
     : groupByRepo(filtered);
 
-  // Build a flat index map: PR url → index in filtered list
+  const displayOrder = useAtomValue(displayOrderAtom);
+
+  // Build a flat index map: PR url → index in display order
   const indexMap = useMemo(() => {
     const map = new Map<string, number>();
-    filtered.forEach((pr, i) => map.set(pr.url, i));
+    displayOrder.forEach((pr, i) => map.set(pr.url, i));
     return map;
-  }, [filtered]);
+  }, [displayOrder]);
 
   if (filtered.length === 0) {
     return <div className="muted">No PRs match filters</div>;

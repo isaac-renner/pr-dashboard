@@ -46,7 +46,8 @@ export function PRRow({ pr, index }: PRRowProps) {
     : pr.pipelineState === "PENDING" ? "Pending"
     : "--";
 
-  const reviewLabel = pr.reviewState === "CHANGES_REQUESTED" ? "Changes"
+  const reviewLabel = pr.isDraft && pr.reviewState === "PENDING" ? "Draft"
+    : pr.reviewState === "CHANGES_REQUESTED" ? "Changes"
     : pr.reviewState === "APPROVED" ? "Approved"
     : "Pending";
 
