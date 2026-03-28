@@ -1,14 +1,15 @@
 import React, { useState } from "react"
+import { useAtomValue } from "@effect/atom-react"
 import type { PR } from "../lib/types.js"
-import { bucketize, groupByTicket, groupByRepo } from "../lib/filters.js"
+import { groupByTicket, groupByRepo } from "../lib/filters.js"
+import { bucketedPrsAtom } from "../atoms/derived.js"
+import { filtersAtom } from "../atoms/filters.js"
 import { timeAgo } from "../lib/format.js"
 import { PRRow } from "./PRRow.js"
 
 const JIRA_BASE = "https://ailo.atlassian.net/browse"
 
-// -----------------------------------------------------------------------------
-// Column headers (shared across all buckets)
-// -----------------------------------------------------------------------------
+// --- Column headers ---
 
 function ColumnHeaders() {
   return (
@@ -25,17 +26,17 @@ function ColumnHeaders() {
   )
 }
 
-// -----------------------------------------------------------------------------
-// Ticket/Repo group (collapsible)
-// -----------------------------------------------------------------------------
+// --- Group section (ticket or repo) ---
 
-interface GroupSectionProps {
+function GroupSection({
+  name,
+  prs,
+  isTicketGroup,
+}: {
   name: string
   prs: PR[]
   isTicketGroup: boolean
-}
-
-function GroupSection({ name, prs, isTicketGroup }: GroupSectionProps) {
+}) {
   const [collapsed, setCollapsed] = useState(false)
 
   const sorted = [...prs].sort(
@@ -45,15 +46,16 @@ function GroupSection({ name, prs, isTicketGroup }: GroupSectionProps) {
   const latest = sorted[0]
 
   const isNoTicket = name === "No ticket"
-  const ticketLink = isTicketGroup && !isNoTicket ? (
-    <span className="ticket-title">
-      <a className="jira" href={`${JIRA_BASE}/${name}`} target="_blank" rel="noreferrer">
-        {name}
-      </a>
-    </span>
-  ) : (
-    <span className="ticket-title">{name}</span>
-  )
+  const ticketLink =
+    isTicketGroup && !isNoTicket ? (
+      <span className="ticket-title">
+        <a className="jira" href={`${JIRA_BASE}/${name}`} target="_blank" rel="noreferrer">
+          {name}
+        </a>
+      </span>
+    ) : (
+      <span className="ticket-title">{name}</span>
+    )
 
   return (
     <div className={`ticket${collapsed ? " collapsed" : ""}`}>
@@ -82,17 +84,17 @@ function GroupSection({ name, prs, isTicketGroup }: GroupSectionProps) {
   )
 }
 
-// -----------------------------------------------------------------------------
-// Bucket (collapsible)
-// -----------------------------------------------------------------------------
+// --- Bucket section ---
 
-interface BucketSectionProps {
+function BucketSection({
+  title,
+  prs,
+  group,
+}: {
   title: string
   prs: PR[]
   group: "ticket" | "repo"
-}
-
-function BucketSection({ title, prs, group }: BucketSectionProps) {
+}) {
   const [collapsed, setCollapsed] = useState(false)
 
   const grouped = group === "ticket" ? groupByTicket(prs) : groupByRepo(prs)
@@ -124,17 +126,11 @@ function BucketSection({ title, prs, group }: BucketSectionProps) {
   )
 }
 
-// -----------------------------------------------------------------------------
-// BucketList
-// -----------------------------------------------------------------------------
+// --- BucketList (reads from atoms) ---
 
-interface BucketListProps {
-  prs: PR[]
-  group: "ticket" | "repo"
-}
-
-export function BucketList({ prs, group }: BucketListProps) {
-  const buckets = bucketize(prs)
+export function BucketList() {
+  const buckets = useAtomValue(bucketedPrsAtom)
+  const filters = useAtomValue(filtersAtom)
 
   const sections: Array<{ title: string; prs: PR[] }> = [
     { title: "Address Now", prs: buckets.now },
@@ -155,7 +151,7 @@ export function BucketList({ prs, group }: BucketListProps) {
           key={s.title}
           title={s.title}
           prs={s.prs}
-          group={group}
+          group={filters.group}
         />
       ))}
     </>

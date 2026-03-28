@@ -5,6 +5,7 @@
     "": {
       "name": "pr-dashboard",
       "dependencies": {
+        "@effect/atom-react": "^4.0.0-beta.42",
         "effect": "^4.0.0-beta.0",
       },
       "devDependencies": {

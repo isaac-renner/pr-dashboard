@@ -1,16 +1,23 @@
-import React, { useMemo } from "react"
-import { usePRs } from "../hooks/usePRs.js"
-import { useFilters } from "../hooks/useFilters.js"
-import { filterPRs } from "../lib/filters.js"
+import React from "react"
+import { useAtomValue, useAtomSet } from "@effect/atom-react"
+import * as AsyncResult from "effect/unstable/reactivity/AsyncResult"
+import { prsResponseAtom, lastRefreshedAtom, prsAtom, refreshAtom } from "../atoms/prs.js"
+import { filtersAtom } from "../atoms/filters.js"
+import { filteredPrsAtom } from "../atoms/derived.js"
 import { timeAgo } from "../lib/format.js"
 import { FilterBar } from "./FilterBar.js"
 import { BucketList } from "./BucketList.js"
 
 export function App() {
-  const { prs, loading, error, lastRefreshed, refresh } = usePRs()
-  const [filters, setFilters] = useFilters()
+  const response = useAtomValue(prsResponseAtom)
+  const prs = useAtomValue(prsAtom)
+  const filtered = useAtomValue(filteredPrsAtom)
+  const lastRefreshed = useAtomValue(lastRefreshedAtom)
+  const filters = useAtomValue(filtersAtom)
+  const refresh = useAtomSet(refreshAtom)
 
-  const filtered = useMemo(() => filterPRs(prs, filters), [prs, filters])
+  const loading = AsyncResult.isInitial(response) || AsyncResult.isWaiting(response)
+  const error = AsyncResult.isFailure(response) ? String(response.cause) : null
 
   return (
     <>
@@ -20,25 +27,23 @@ export function App() {
           <div className="tagline">Triage by urgency, ticket, and repo</div>
         </div>
         <div className="refresh-bar">
-          <span id="refresh-status">
-            {loading ? (
+          <span>
+            {loading && !prs.length ? (
               <span className="refreshing">
                 <span className="spinner spinner-sm" />
-                Refreshing...
+                Loading...
               </span>
             ) : lastRefreshed ? (
               `Last refreshed ${timeAgo(lastRefreshed)}`
-            ) : (
-              "Loading..."
-            )}
+            ) : null}
           </span>
-          <button onClick={refresh} disabled={loading}>
+          <button onClick={() => refresh()} disabled={loading}>
             Refresh
           </button>
         </div>
       </div>
 
-      <FilterBar filters={filters} onFiltersChange={setFilters} />
+      <FilterBar />
 
       <div id="content">
         {loading && !prs.length && (
@@ -53,7 +58,7 @@ export function App() {
             <p className="count">
               {filtered.length} PR{filtered.length === 1 ? "" : "s"}
             </p>
-            <BucketList prs={filtered} group={filters.group} />
+            <BucketList />
           </>
         )}
         {!loading && !error && prs.length === 0 && (
