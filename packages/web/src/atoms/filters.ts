@@ -35,7 +35,7 @@ export const filtersAtom: Atom.Atom<Filters> = Atom.make((get) => {
     search: getParam(searchAtom, ""),
     repos: get(selectedReposAtom),
     pipeline: getParam(pipelineAtom, "all") as Filters["pipeline"],
-    drafts: getParam(draftsAtom, "exclude") as Filters["drafts"],
+    drafts: getParam(draftsAtom, "include") as Filters["drafts"],
     group: getParam(groupAtom, "ticket") as Filters["group"],
   };
 });
