@@ -2,7 +2,7 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import React from "react";
 import { availableReposAtom } from "../atoms/derived.js";
-import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
+import { searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
 import { ChipFilterPopover } from "./ChipFilterPopover.js";
 
 const PIPELINE_OPTIONS = ["Passing", "Failing", "Pending", "None"];
@@ -14,17 +14,14 @@ interface FilterBarProps {
 
 export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
   const search = useAtomValue(searchAtom);
-  const group = useAtomValue(groupAtom);
   const selectedRepos = useAtomValue(selectedReposAtom);
   const selectedPipelines = useAtomValue(selectedPipelinesAtom);
   const availableRepos = useAtomValue(availableReposAtom);
   const setSearch = useAtomSet(searchAtom);
-  const setGroup = useAtomSet(groupAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
 
   const searchVal = search._tag === "Some" ? search.value : "";
-  const groupVal = group._tag === "Some" ? group.value : "ticket";
 
   function toggleItem(
     set: (fn: (c: ReadonlyArray<string>) => ReadonlyArray<string>) => void,
@@ -46,18 +43,15 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
 
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "1ch", alignItems: "end" }}>
-        <label>
-          Search
-          <input
-            ref={filterInputRef}
-            type="text"
-            value={searchVal}
-            onChange={(e) => setSearch(Option.some(e.target.value))}
-            onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-            placeholder="fuzzy search PRs..."
-          />
-        </label>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "1ch", alignItems: "end" }}>
+        <input
+          ref={filterInputRef}
+          type="text"
+          value={searchVal}
+          onChange={(e) => setSearch(Option.some(e.target.value))}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          placeholder="/ search"
+        />
 
         <ChipFilterPopover
           label="Repos"
@@ -67,18 +61,6 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
           onClear={() => setSelectedRepos([])}
           triggerRef={repoFilterRef}
         />
-
-        <label>
-          Group by
-          <select
-            value={groupVal}
-            onChange={(e) => setGroup(Option.some(e.target.value))}
-          >
-            <option value="ticket">Ticket</option>
-            <option value="repo">Repo</option>
-            <option value="stack">Stack</option>
-          </select>
-        </label>
 
         <ChipFilterPopover
           label="Pipeline"
