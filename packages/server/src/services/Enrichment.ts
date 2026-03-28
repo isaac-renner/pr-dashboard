@@ -81,67 +81,9 @@ export interface GQLNode {
   }
 }
 
-// -----------------------------------------------------------------------------
-// The GraphQL query (used by GitHubClient for backfill)
-// -----------------------------------------------------------------------------
-
-const PR_FIELDS = `
-  ... on PullRequest {
-    number state title url isDraft createdAt updatedAt headRefName mergeable
-    repository { name nameWithOwner }
-    commits(last: 1) {
-      nodes {
-        commit {
-          statusCheckRollup {
-            state
-            contexts(first: 50) {
-              nodes {
-                __typename
-                ... on CheckRun { name status conclusion detailsUrl }
-                ... on StatusContext { context state targetUrl }
-              }
-            }
-          }
-        }
-      }
-    }
-    reviews(last: 50) {
-      nodes { author { __typename login } state submittedAt }
-    }
-    reviewThreads(last: 50) {
-      nodes {
-        id
-        isResolved
-        comments(last: 20) {
-          nodes { author { __typename login } bodyText createdAt url }
-        }
-      }
-    }
-  }
-`
-
-export const BACKFILL_QUERY = `{
-  authored: search(query: "author:@me state:open type:pr", type: ISSUE, first: 100) {
-    nodes { ${PR_FIELDS} }
-  }
-  assigned: search(query: "assignee:@me state:open type:pr", type: ISSUE, first: 100) {
-    nodes { ${PR_FIELDS} }
-  }
-}`
-
-/**
- * Build a targeted query for a single PR (used after webhook events
- * when we need fresh mergeable/check status).
- */
-export function singlePRQuery(owner: string, repo: string, number: number): string {
-  return `{
-    repository(owner: "${owner}", name: "${repo}") {
-      pullRequest(number: ${number}) {
-        ${PR_FIELDS}
-      }
-    }
-  }`
-}
+// Queries are now defined as .graphql files in @pr-dashboard/github-graphql
+// and codegen produces typed document nodes. The raw query strings have been
+// removed from this module.
 
 // -----------------------------------------------------------------------------
 // Pure enrichment functions

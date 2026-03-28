@@ -6,8 +6,6 @@ export {
   computeUnresolvedThreads,
   parseJiraTicket,
   isBotAuthor,
-  BACKFILL_QUERY,
-  singlePRQuery,
   type GQLNode,
   type GQLStatusCheckRollup,
   type GQLReviewThread,
@@ -35,6 +33,13 @@ export {
   GitHubClientLive,
   type GitHubClientShape,
 } from "./GitHubClient.js"
+
+// Re-export the GraphQL client for layer composition
+export {
+  GitHubGraphQLClient,
+  GitHubGraphQLClientLive,
+  GraphQLRequestError,
+} from "@pr-dashboard/github-graphql"
 
 export {
   OpenCodeClient,

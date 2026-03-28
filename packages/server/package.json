@@ -4,7 +4,8 @@
   "type": "module",
   "dependencies": {
     "@pr-dashboard/shared": "workspace:*",
-    "@pr-dashboard/github-app": "workspace:*"
+    "@pr-dashboard/github-app": "workspace:*",
+    "@pr-dashboard/github-graphql": "workspace:*"
   },
   "peerDependencies": {
     "effect": "^4.0.0-beta.0"

@@ -11,7 +11,6 @@ export {
   type WebhookHandler,
   type WebhookHandlerMap,
 } from "./webhooks/WebhookRouter.js"
-export { GitHubGraphQL, GraphQLError } from "./graphql/GitHubGraphQL.js"
 
 // Schemas
 export * from "./schemas/index.js"

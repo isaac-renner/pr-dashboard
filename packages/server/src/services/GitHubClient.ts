@@ -1,8 +1,8 @@
 /**
  * GitHubClient — fetches PR data from GitHub's GraphQL API.
  *
- * Uses the github-app library for authentication and the Enrichment
- * module for transforming raw GraphQL nodes into enriched PR models.
+ * Uses typed document nodes (from @pr-dashboard/github-graphql codegen)
+ * and the Enrichment module for transforming responses into enriched PR models.
  *
  * Two modes of operation:
  * 1. Backfill: fetch all open PRs (on startup or manual refresh)
@@ -10,34 +10,15 @@
  */
 
 import { Config, Effect, Layer, ServiceMap } from "effect"
-import { GitHubGraphQL, type GraphQLError } from "@pr-dashboard/github-app"
-import { Schema } from "effect"
-import type { PR } from "@pr-dashboard/shared"
 import {
-  BACKFILL_QUERY,
-  singlePRQuery,
-  enrichGraphQLNode,
-  type GQLNode,
-} from "./Enrichment.js"
-
-// -----------------------------------------------------------------------------
-// GraphQL response schemas (for decoding)
-// -----------------------------------------------------------------------------
-
-const BackfillResponse = Schema.Struct({
-  authored: Schema.Struct({
-    nodes: Schema.Array(Schema.Unknown),
-  }),
-  assigned: Schema.Struct({
-    nodes: Schema.Array(Schema.Unknown),
-  }),
-})
-
-const SinglePRResponse = Schema.Struct({
-  repository: Schema.Struct({
-    pullRequest: Schema.Unknown,
-  }),
-})
+  GitHubGraphQLClient,
+  GraphQLRequestError,
+  BackfillOpenPRsDocument,
+  SinglePrDocument,
+  type PrFieldsFragment,
+} from "@pr-dashboard/github-graphql"
+import type { PR } from "@pr-dashboard/shared"
+import { enrichGraphQLNode, type GQLNode } from "./Enrichment.js"
 
 // -----------------------------------------------------------------------------
 // Service interface
@@ -48,7 +29,7 @@ export interface GitHubClientShape {
    * Fetch all open PRs (authored + assigned). Deduplicates by URL.
    * Returns enriched PR models ready for the PRStore.
    */
-  readonly fetchAllOpenPRs: Effect.Effect<ReadonlyArray<PR>, GraphQLError>
+  readonly fetchAllOpenPRs: Effect.Effect<ReadonlyArray<PR>, GraphQLRequestError>
 
   /**
    * Re-fetch a single PR by owner/repo/number.
@@ -58,7 +39,7 @@ export interface GitHubClientShape {
     owner: string,
     repo: string,
     number: number,
-  ) => Effect.Effect<PR | null, GraphQLError>
+  ) => Effect.Effect<PR | null, GraphQLRequestError>
 
   /** The current user (for review state / unresolved thread filtering) */
   readonly currentUser: string
@@ -70,12 +51,24 @@ export class GitHubClient extends ServiceMap.Service<
 >()("GitHubClient") {}
 
 // -----------------------------------------------------------------------------
+// Adapt PrFieldsFragment (codegen) → GQLNode (enrichment)
+//
+// The codegen types are structurally compatible but use different
+// __typename unions for the Actor interface. We cast through the
+// enrichment's GQLNode which uses a simpler { __typename, login } shape.
+// -----------------------------------------------------------------------------
+
+function fragmentToGQLNode(fragment: PrFieldsFragment): GQLNode {
+  return fragment as unknown as GQLNode
+}
+
+// -----------------------------------------------------------------------------
 // Live implementation
 // -----------------------------------------------------------------------------
 
 export const GitHubClientLive = Layer.effect(GitHubClient)(
   Effect.gen(function* () {
-    const graphql = yield* Effect.service(GitHubGraphQL)
+    const gql = yield* Effect.service(GitHubGraphQLClient)
     const currentUser = yield* Config.string("GH_USER").pipe(
       Config.withDefault("isaac-renner"),
     )
@@ -84,29 +77,37 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
       currentUser,
 
       fetchAllOpenPRs: Effect.gen(function* () {
-        const data = yield* graphql.query(BACKFILL_QUERY, {}, BackfillResponse)
-        const authored = data.authored.nodes as Array<GQLNode>
-        const assigned = data.assigned.nodes as Array<GQLNode>
+        const data = yield* gql.execute(BackfillOpenPRsDocument)
 
-        // Deduplicate by URL
+        const authored = data.authored.nodes ?? []
+        const assigned = data.assigned.nodes ?? []
+
+        // Deduplicate by URL, skip non-PR search results
         const seen = new Set<string>()
         const prs: Array<PR> = []
+
         for (const node of [...authored, ...assigned]) {
-          if (node.url && !seen.has(node.url)) {
-            seen.add(node.url)
-            prs.push(enrichGraphQLNode(node, currentUser))
-          }
+          if (!node || !("number" in node)) continue
+          const fragment = node as PrFieldsFragment
+          if (seen.has(fragment.url)) continue
+          seen.add(fragment.url)
+          prs.push(enrichGraphQLNode(fragmentToGQLNode(fragment), currentUser))
         }
+
         return prs
       }),
 
       fetchSinglePR: (owner, repo, number) =>
         Effect.gen(function* () {
-          const query = singlePRQuery(owner, repo, number)
-          const data = yield* graphql.query(query, {}, SinglePRResponse)
-          const node = data.repository.pullRequest as GQLNode | null
+          const data = yield* gql.execute(SinglePrDocument, {
+            owner,
+            name: repo,
+            number,
+          })
+
+          const node = data.repository?.pullRequest
           if (!node) return null
-          return enrichGraphQLNode(node, currentUser)
+          return enrichGraphQLNode(fragmentToGQLNode(node), currentUser)
         }),
     }
   }),

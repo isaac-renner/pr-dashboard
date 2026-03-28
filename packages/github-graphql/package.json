@@ -1,0 +1,26 @@
+{
+  "name": "@pr-dashboard/github-graphql",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated": "./src/generated/index.ts"
+  },
+  "scripts": {
+    "codegen": "graphql-codegen --config codegen.ts"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.0"
+  },
+  "dependencies": {
+    "@octokit/graphql-schema": "^15.26.0",
+    "@graphql-typed-document-node/core": "^3.2.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/typed-document-node": "^5.0.0",
+    "@graphql-codegen/typescript": "^4.0.0",
+    "@graphql-codegen/typescript-operations": "^4.0.0",
+    "graphql": "^16.0.0"
+  }
+}

@@ -8,6 +8,7 @@
 
 import { Effect, Layer } from "effect"
 import type { SessionRef } from "@pr-dashboard/shared"
+import { GitHubGraphQLClientLive } from "@pr-dashboard/github-graphql"
 import { PRStore, PRStoreLive } from "./services/PRStore.js"
 import { GitHubClient, GitHubClientLive } from "./services/GitHubClient.js"
 import { OpenCodeClient, OpenCodeClientLive } from "./services/OpenCodeClient.js"
@@ -48,12 +49,12 @@ const program = Effect.gen(function* () {
   yield* Effect.never
 })
 
-// Layer composition:
-// GitHubClientLive requires GitHubGraphQL (from github-app)
+// Layer composition
 const _MainLayer = Layer.mergeAll(
   PRStoreLive,
   GitHubClientLive,
   OpenCodeClientLive,
+  GitHubGraphQLClientLive,
 )
 
 // For now, log what we have:

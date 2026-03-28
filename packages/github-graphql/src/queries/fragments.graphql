@@ -1,0 +1,67 @@
+fragment PRFields on PullRequest {
+  number
+  state
+  title
+  url
+  isDraft
+  createdAt
+  updatedAt
+  headRefName
+  mergeable
+  repository {
+    name
+    nameWithOwner
+  }
+  commits(last: 1) {
+    nodes {
+      commit {
+        statusCheckRollup {
+          state
+          contexts(first: 50) {
+            nodes {
+              __typename
+              ... on CheckRun {
+                name
+                status
+                conclusion
+                detailsUrl
+              }
+              ... on StatusContext {
+                context
+                state
+                targetUrl
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  reviews(last: 50) {
+    nodes {
+      author {
+        __typename
+        login
+      }
+      state
+      submittedAt
+    }
+  }
+  reviewThreads(last: 50) {
+    nodes {
+      id
+      isResolved
+      comments(last: 20) {
+        nodes {
+          author {
+            __typename
+            login
+          }
+          bodyText
+          createdAt
+          url
+        }
+      }
+    }
+  }
+}
