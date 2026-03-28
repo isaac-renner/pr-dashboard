@@ -6,7 +6,7 @@
  */
 
 import * as Atom from "effect/unstable/reactivity/Atom";
-import { extractRepos, filterPRs, groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
+import { extractRepos, extractTickets, filterPRs, groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
 import type { PR } from "../lib/types.js";
 import { filtersAtom } from "./filters.js";
 import { prsAtom } from "./prs.js";
@@ -16,6 +16,13 @@ import { prsAtom } from "./prs.js";
 export const availableReposAtom: Atom.Atom<string[]> = Atom.make((get) => {
   const prs = get(prsAtom);
   return extractRepos(prs);
+});
+
+// --- Available tickets ---
+
+export const availableTicketsAtom: Atom.Atom<string[]> = Atom.make((get) => {
+  const prs = get(prsAtom);
+  return extractTickets(prs);
 });
 
 // --- Filtered PRs ---

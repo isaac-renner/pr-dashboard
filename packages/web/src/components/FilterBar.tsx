@@ -1,8 +1,8 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import React from "react";
-import { availableReposAtom } from "../atoms/derived.js";
-import { searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom } from "../atoms/filters.js";
+import { availableReposAtom, availableTicketsAtom } from "../atoms/derived.js";
+import { searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "../atoms/filters.js";
 import { REVIEW_OPTIONS } from "../lib/types.js";
 import { ChipFilterPopover } from "./ChipFilterPopover.js";
 
@@ -13,17 +13,21 @@ interface FilterBarProps {
   readonly repoFilterRef?: React.RefObject<HTMLButtonElement | null>;
   readonly reviewFilterRef?: React.RefObject<HTMLButtonElement | null>;
   readonly pipelineFilterRef?: React.RefObject<HTMLButtonElement | null>;
+  readonly ticketFilterRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
-export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipelineFilterRef }: FilterBarProps) {
+export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipelineFilterRef, ticketFilterRef }: FilterBarProps) {
   const search = useAtomValue(searchAtom);
   const selectedRepos = useAtomValue(selectedReposAtom);
   const selectedPipelines = useAtomValue(selectedPipelinesAtom);
   const selectedReviews = useAtomValue(selectedReviewsAtom);
+  const selectedTickets = useAtomValue(selectedTicketsAtom);
+  const availableTickets = useAtomValue(availableTicketsAtom);
   const availableRepos = useAtomValue(availableReposAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
+  const setSelectedTickets = useAtomSet(selectedTicketsAtom);
   const setSelectedReviews = useAtomSet(selectedReviewsAtom);
 
   const searchVal = search._tag === "Some" ? search.value : "";
@@ -44,11 +48,11 @@ export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipe
     set((current) => current.filter((v) => v !== value));
   }
 
-  const hasActive = selectedRepos.length > 0 || selectedPipelines.length > 0 || selectedReviews.length > 0;
+  const hasActive = selectedRepos.length > 0 || selectedPipelines.length > 0 || selectedReviews.length > 0 || selectedTickets.length > 0;
 
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "1ch", alignItems: "end" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto auto", gap: "1ch", alignItems: "end" }}>
         <input
           ref={filterInputRef}
           type="text"
@@ -74,6 +78,15 @@ export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipe
           onToggle={(v) => toggleItem(setSelectedReviews, v)}
           onClear={() => setSelectedReviews([])}
           triggerRef={reviewFilterRef}
+        />
+
+        <ChipFilterPopover
+          label="Ticket"
+          options={[...availableTickets]}
+          selected={[...selectedTickets]}
+          onToggle={(v) => toggleItem(setSelectedTickets, v)}
+          onClear={() => setSelectedTickets([])}
+          triggerRef={ticketFilterRef}
         />
 
         <ChipFilterPopover
@@ -106,6 +119,16 @@ export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipe
               type="button"
             >
               {r} ×
+            </button>
+          ))}
+          {selectedTickets.map((t) => (
+            <button
+              key={`ticket:${t}`}
+              className="chip"
+              onClick={() => removeItem(setSelectedTickets, t)}
+              type="button"
+            >
+              {t} ×
             </button>
           ))}
           {selectedPipelines.map((p) => (

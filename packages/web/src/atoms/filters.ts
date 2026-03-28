@@ -25,6 +25,10 @@ export const selectedReviewsAtom: Atom.Writable<ReadonlyArray<string>> = Atom.ma
   [] as ReadonlyArray<string>,
 );
 
+export const selectedTicketsAtom: Atom.Writable<ReadonlyArray<string>> = Atom.make(
+  [] as ReadonlyArray<string>,
+);
+
 // --- Composite ---
 
 export const filtersAtom: Atom.Atom<Filters> = Atom.make((get) => {
@@ -38,6 +42,7 @@ export const filtersAtom: Atom.Atom<Filters> = Atom.make((get) => {
     repos: get(selectedReposAtom),
     pipelines: get(selectedPipelinesAtom),
     reviews: get(selectedReviewsAtom),
+    tickets: get(selectedTicketsAtom),
     group: getParam(groupAtom, "ticket") as Filters["group"],
   };
 });

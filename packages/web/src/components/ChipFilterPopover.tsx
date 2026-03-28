@@ -75,9 +75,12 @@ export function ChipFilterPopover({
       setFocusIndex((i) => (i - 1 + filtered.length) % filtered.length);
       return;
     }
-    if (e.key === "Enter" && focusIndex >= 0 && focusIndex < filtered.length) {
+    if (e.key === "Enter") {
       e.preventDefault();
-      onToggle(filtered[focusIndex]!);
+      if (focusIndex >= 0 && focusIndex < filtered.length) {
+        onToggle(filtered[focusIndex]!);
+      }
+      setOpen(false);
       return;
     }
   }, [filtered, focusIndex, onToggle]);

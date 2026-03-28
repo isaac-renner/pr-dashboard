@@ -61,6 +61,12 @@ export function filterPRs(prs: PR[], filters: Filters): PR[] {
       // Review filter (multi-select)
       if (filters.reviews.length > 0 && !filters.reviews.includes(getReviewLabel(pr))) return false;
 
+      // Ticket filter (multi-select)
+      if (filters.tickets.length > 0) {
+        const ticket = pr.jiraTicket ?? "No ticket";
+        if (!filters.tickets.includes(ticket)) return false;
+      }
+
       return true;
     })
     .sort(
@@ -77,6 +83,22 @@ export function extractRepos(prs: PR[]): string[] {
     repos.add(pr.repository.name);
   }
   return [...repos].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Extract all unique ticket names from the PR list, sorted alphabetically.
+ * "No ticket" for PRs without a Jira ticket.
+ */
+export function extractTickets(prs: PR[]): string[] {
+  const tickets = new Set<string>();
+  for (const pr of prs) {
+    tickets.add(pr.jiraTicket ?? "No ticket");
+  }
+  return [...tickets].sort((a, b) => {
+    if (a === "No ticket") return 1;
+    if (b === "No ticket") return -1;
+    return a.localeCompare(b);
+  });
 }
 
 // -----------------------------------------------------------------------------

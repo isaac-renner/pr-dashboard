@@ -3,7 +3,7 @@ import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
-import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom } from "../atoms/filters.js";
+import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { selectedUrlAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
@@ -27,6 +27,7 @@ export function App() {
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
   const setSelectedReviews = useAtomSet(selectedReviewsAtom);
+  const setSelectedTickets = useAtomSet(selectedTicketsAtom);
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const setSidebarOpen = useAtomSet(sidebarOpenAtom);
 
@@ -43,11 +44,10 @@ export function App() {
     }
   }, [selectedUrl, selectedIndex, setSelectedUrl]);
 
-  // Manage body class for sidebar layout shift
+  // Close sidebar when no PR is selected
   useEffect(() => {
-    document.body.classList.toggle("sidebar-open", sidebarOpen);
-    return () => document.body.classList.remove("sidebar-open");
-  }, [sidebarOpen]);
+    if (!selectedUrl && sidebarOpen) setSidebarOpen(false);
+  }, [selectedUrl, sidebarOpen, setSidebarOpen]);
 
   const selectedPR = selectedIndex >= 0 ? displayOrder[selectedIndex] ?? null : null;
 
@@ -57,8 +57,10 @@ export function App() {
   const repoFilterRef = useRef<HTMLButtonElement>(null);
   const reviewFilterRef = useRef<HTMLButtonElement>(null);
   const pipelineFilterRef = useRef<HTMLButtonElement>(null);
+  const ticketFilterRef = useRef<HTMLButtonElement>(null);
 
   function moveSelection(delta: number) {
+    if (actionsOpen || helpOpen) return;
     if (displayOrder.length === 0) return;
     if (delta < 0 && (selectedIndex === 0 || selectedIndex === -1)) {
       setSelectedUrl(null);
@@ -90,13 +92,30 @@ export function App() {
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
     { keys: "f v", label: "Review filter", action: () => reviewFilterRef.current?.click(), group: "Filters" },
     { keys: "f p", label: "Pipeline filter", action: () => pipelineFilterRef.current?.click(), group: "Filters" },
-    { keys: "c f", label: "Clear all filters", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
+    { keys: "f t", label: "Ticket filter", action: () => ticketFilterRef.current?.click(), group: "Filters" },
+    { keys: "c f", label: "Clear all filters", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); setSelectedTickets([]); }, group: "Filters" },
 
     { keys: "i", label: "Toggle sidebar", action: () => setSidebarOpen((o) => !o), group: "Navigation" },
 
     { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
-    { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setActionsOpen(false); setSidebarOpen(false); setSelectedUrl(null); }, group: "General" },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedUrl, setSidebarOpen, displayOrder, selectedIndex, selectedPR]);
+    {
+      keys: "Escape",
+      label: "Close / deselect",
+      enableInInputs: true,
+      group: "General",
+      action: () => {
+        // Layered dismiss: blur input → close modal → close sidebar → deselect
+        if (document.activeElement instanceof HTMLElement && document.activeElement.tagName === "INPUT") {
+          document.activeElement.blur();
+          return;
+        }
+        if (helpOpen) { setHelpOpen(false); return; }
+        if (actionsOpen) { setActionsOpen(false); return; }
+        if (sidebarOpen) { setSidebarOpen(false); return; }
+        if (selectedUrl) { setSelectedUrl(null); return; }
+      },
+    },
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedUrl, setSidebarOpen, displayOrder, selectedIndex, selectedPR, helpOpen, actionsOpen, sidebarOpen, selectedUrl]);
 
   const pending = useShortcuts(shortcuts);
 
@@ -105,23 +124,27 @@ export function App() {
 
   return (
     <>
-      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} reviewFilterRef={reviewFilterRef} pipelineFilterRef={pipelineFilterRef} />
+      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} reviewFilterRef={reviewFilterRef} pipelineFilterRef={pipelineFilterRef} ticketFilterRef={ticketFilterRef} />
 
-      {loading && !prs.length && (
-        <div className="flex"><div className="spinner" /> Loading...</div>
-      )}
-      {error && <div>Error: {error}</div>}
-      {prs.length > 0 && (
-        <>
-          <div className="muted">
-            {filtered.length} PR{filtered.length === 1 ? "" : "s"}
-          </div>
-          <PRList />
-        </>
-      )}
-      {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
+      <div className="app-layout">
+        <div className="app-main">
+          {loading && !prs.length && (
+            <div className="flex"><div className="spinner" /> Loading...</div>
+          )}
+          {error && <div>Error: {error}</div>}
+          {prs.length > 0 && (
+            <>
+              <div className="muted">
+                {filtered.length} PR{filtered.length === 1 ? "" : "s"}
+              </div>
+              <PRList />
+            </>
+          )}
+          {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
+        </div>
+        <Sidebar />
+      </div>
 
-      <Sidebar />
       <FloatingBar pending={pending} shortcuts={shortcuts} selectedIndex={selectedIndex} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
       <ActionsModal pr={selectedPR} open={actionsOpen} onClose={() => setActionsOpen(false)} />
