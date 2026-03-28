@@ -5,12 +5,14 @@ export {
   type GitHubGraphQLClientShape,
 } from "./client.js"
 
-export {
-  BackfillOpenPRsDocument,
-  SinglePrDocument,
-  type PrFieldsFragment,
-  type BackfillOpenPRsQuery,
-  type BackfillOpenPRsQueryVariables,
-  type SinglePrQuery,
-  type SinglePrQueryVariables,
-} from "./generated/index.js"
+export { BackfillOpenPRs, SinglePR } from "./queries.js"
+
+export { graphql } from "./generated/gql.js"
+
+export type {
+  PrFieldsFragment,
+  BackfillOpenPRsQuery,
+  BackfillOpenPRsQueryVariables,
+  SinglePrQuery,
+  SinglePrQueryVariables,
+} from "./generated/graphql.js"

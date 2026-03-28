@@ -1,6 +1,7 @@
+/* eslint-disable */
 import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
 export type Maybe<T> = T | null;
-export type InputMaybe<T> = Maybe<T>;
+export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
@@ -31473,6 +31474,23 @@ export type WorkflowsParametersInput = {
   readonly workflows: ReadonlyArray<WorkflowFileReferenceInput>;
 };
 
+export type PrFieldsFragment = { readonly number: number, readonly state: PullRequestState, readonly title: string, readonly url: string, readonly isDraft: boolean, readonly createdAt: string, readonly updatedAt: string, readonly headRefName: string, readonly mergeable: MergeableState, readonly repository: { readonly name: string, readonly nameWithOwner: string }, readonly commits: { readonly nodes?: ReadonlyArray<{ readonly commit: { readonly statusCheckRollup?: { readonly state: StatusState, readonly contexts: { readonly nodes?: ReadonlyArray<
+              | { readonly __typename: 'CheckRun', readonly name: string, readonly status: CheckStatusState, readonly conclusion?: CheckConclusionState | null, readonly detailsUrl?: string | null }
+              | { readonly __typename: 'StatusContext', readonly context: string, readonly state: StatusState, readonly targetUrl?: string | null }
+             | null> | null } } | null } } | null> | null }, readonly reviews?: { readonly nodes?: ReadonlyArray<{ readonly state: PullRequestReviewState, readonly submittedAt?: string | null, readonly author?:
+        | { readonly __typename: 'Bot', readonly login: string }
+        | { readonly __typename: 'EnterpriseUserAccount', readonly login: string }
+        | { readonly __typename: 'Mannequin', readonly login: string }
+        | { readonly __typename: 'Organization', readonly login: string }
+        | { readonly __typename: 'User', readonly login: string }
+       | null } | null> | null } | null, readonly reviewThreads: { readonly nodes?: ReadonlyArray<{ readonly id: string, readonly isResolved: boolean, readonly comments: { readonly nodes?: ReadonlyArray<{ readonly bodyText: string, readonly createdAt: string, readonly url: string, readonly author?:
+            | { readonly __typename: 'Bot', readonly login: string }
+            | { readonly __typename: 'EnterpriseUserAccount', readonly login: string }
+            | { readonly __typename: 'Mannequin', readonly login: string }
+            | { readonly __typename: 'Organization', readonly login: string }
+            | { readonly __typename: 'User', readonly login: string }
+           | null } | null> | null } } | null> | null } };
+
 export type BackfillOpenPRsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -31513,23 +31531,6 @@ export type BackfillOpenPRsQuery = { readonly authored: { readonly nodes?: Reado
                  | null } | null> | null } } | null> | null } }
       | Record<PropertyKey, never>
      | null> | null } };
-
-export type PrFieldsFragment = { readonly number: number, readonly state: PullRequestState, readonly title: string, readonly url: string, readonly isDraft: boolean, readonly createdAt: string, readonly updatedAt: string, readonly headRefName: string, readonly mergeable: MergeableState, readonly repository: { readonly name: string, readonly nameWithOwner: string }, readonly commits: { readonly nodes?: ReadonlyArray<{ readonly commit: { readonly statusCheckRollup?: { readonly state: StatusState, readonly contexts: { readonly nodes?: ReadonlyArray<
-              | { readonly __typename: 'CheckRun', readonly name: string, readonly status: CheckStatusState, readonly conclusion?: CheckConclusionState | null, readonly detailsUrl?: string | null }
-              | { readonly __typename: 'StatusContext', readonly context: string, readonly state: StatusState, readonly targetUrl?: string | null }
-             | null> | null } } | null } } | null> | null }, readonly reviews?: { readonly nodes?: ReadonlyArray<{ readonly state: PullRequestReviewState, readonly submittedAt?: string | null, readonly author?:
-        | { readonly __typename: 'Bot', readonly login: string }
-        | { readonly __typename: 'EnterpriseUserAccount', readonly login: string }
-        | { readonly __typename: 'Mannequin', readonly login: string }
-        | { readonly __typename: 'Organization', readonly login: string }
-        | { readonly __typename: 'User', readonly login: string }
-       | null } | null> | null } | null, readonly reviewThreads: { readonly nodes?: ReadonlyArray<{ readonly id: string, readonly isResolved: boolean, readonly comments: { readonly nodes?: ReadonlyArray<{ readonly bodyText: string, readonly createdAt: string, readonly url: string, readonly author?:
-            | { readonly __typename: 'Bot', readonly login: string }
-            | { readonly __typename: 'EnterpriseUserAccount', readonly login: string }
-            | { readonly __typename: 'Mannequin', readonly login: string }
-            | { readonly __typename: 'Organization', readonly login: string }
-            | { readonly __typename: 'User', readonly login: string }
-           | null } | null> | null } } | null> | null } };
 
 export type SinglePrQueryVariables = Exact<{
   owner: Scalars['String']['input'];

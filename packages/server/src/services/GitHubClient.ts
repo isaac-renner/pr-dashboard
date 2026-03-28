@@ -13,8 +13,8 @@ import { Config, Effect, Layer, ServiceMap } from "effect"
 import {
   GitHubGraphQLClient,
   GraphQLRequestError,
-  BackfillOpenPRsDocument,
-  SinglePrDocument,
+  BackfillOpenPRs,
+  SinglePR,
   type PrFieldsFragment,
 } from "@pr-dashboard/github-graphql"
 import type { PR } from "@pr-dashboard/shared"
@@ -77,7 +77,7 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
       currentUser,
 
       fetchAllOpenPRs: Effect.gen(function* () {
-        const data = yield* gql.execute(BackfillOpenPRsDocument)
+        const data = yield* gql.execute(BackfillOpenPRs)
 
         const authored = data.authored.nodes ?? []
         const assigned = data.assigned.nodes ?? []
@@ -99,7 +99,7 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
 
       fetchSinglePR: (owner, repo, number) =>
         Effect.gen(function* () {
-          const data = yield* gql.execute(SinglePrDocument, {
+          const data = yield* gql.execute(SinglePR, {
             owner,
             name: repo,
             number,

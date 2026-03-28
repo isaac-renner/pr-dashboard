@@ -14,23 +14,20 @@ function findSchemaPath(): string {
       "node_modules/@octokit/graphql-schema/schema.graphql",
     )
   }
-  // Fallback for standard hoisting
   return "node_modules/@octokit/graphql-schema/schema.graphql"
 }
 
 const config: CodegenConfig = {
   schema: findSchemaPath(),
-  documents: "packages/github-graphql/src/queries/**/*.graphql",
+  documents: "packages/github-graphql/src/**/*.ts",
+  ignoreNoDocuments: true,
   generates: {
-    "packages/github-graphql/src/generated/graphql.ts": {
-      plugins: [
-        "typescript",
-        "typescript-operations",
-        "typed-document-node",
-      ],
+    "packages/github-graphql/src/generated/": {
+      preset: "client",
+      presetConfig: {
+        fragmentMasking: false,
+      },
       config: {
-        avoidOptionals: false,
-        strictScalars: false,
         skipTypename: true,
         immutableTypes: true,
         scalars: {
