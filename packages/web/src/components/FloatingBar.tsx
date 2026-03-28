@@ -53,6 +53,7 @@ export function FloatingBar({ pending, shortcuts, selectedIndex }: FloatingBarPr
         <span><kbd>j</kbd><kbd>k</kbd> nav</span>
         <span><kbd>o</kbd> open</span>
         <span><kbd>p</kbd> pipeline</span>
+        <span><kbd>i</kbd> detail</span>
         <span><kbd>/</kbd> search</span>
         <span><kbd>?</kbd> help</span>
       </div>

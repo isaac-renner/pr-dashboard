@@ -5,13 +5,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
-import { selectedUrlAtom } from "../atoms/selection.js";
+import { selectedUrlAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
 import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
 import { PRList } from "./PRList.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
+import { Sidebar } from "./Sidebar.js";
 
 export function App() {
   const response = useAtomValue(prsResponseAtom);
@@ -25,6 +26,8 @@ export function App() {
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
   const setSelectedReviews = useAtomSet(selectedReviewsAtom);
+  const sidebarOpen = useAtomValue(sidebarOpenAtom);
+  const setSidebarOpen = useAtomSet(sidebarOpenAtom);
 
   // Current index of selected URL in display order
   const selectedIndex = useMemo(() => {
@@ -38,6 +41,12 @@ export function App() {
       setSelectedUrl(null);
     }
   }, [selectedUrl, selectedIndex, setSelectedUrl]);
+
+  // Manage body class for sidebar layout shift
+  useEffect(() => {
+    document.body.classList.toggle("sidebar-open", sidebarOpen);
+    return () => document.body.classList.remove("sidebar-open");
+  }, [sidebarOpen]);
 
   const selectedPR = selectedIndex >= 0 ? displayOrder[selectedIndex] ?? null : null;
 
@@ -78,9 +87,11 @@ export function App() {
     { keys: "f v", label: "Review filter", action: () => reviewFilterRef.current?.click(), group: "Filters" },
     { keys: "c f", label: "Clear all filters", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
 
+    { keys: "i", label: "Toggle sidebar", action: () => setSidebarOpen((o) => !o), group: "Navigation" },
+
     { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
-    { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setSelectedUrl(null); }, group: "General" },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedUrl, displayOrder, selectedIndex, selectedPR]);
+    { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setSidebarOpen(false); setSelectedUrl(null); }, group: "General" },
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedUrl, setSidebarOpen, displayOrder, selectedIndex, selectedPR]);
 
   const pending = useShortcuts(shortcuts);
 
@@ -105,6 +116,7 @@ export function App() {
       )}
       {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
 
+      <Sidebar />
       <FloatingBar pending={pending} shortcuts={shortcuts} selectedIndex={selectedIndex} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
     </>

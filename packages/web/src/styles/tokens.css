@@ -491,6 +491,77 @@ details[open] > summary::before {
   }
 }
 
+/* ── Sidebar ── */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: calc(var(--line-height) * 2);
+  width: 40ch;
+  background: var(--bg);
+  border-left: var(--border) solid var(--border-color);
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.sidebar-content {
+  padding: var(--line-height) 1ch;
+}
+
+.sidebar-content > * + * {
+  margin-top: var(--line-height);
+}
+
+.sidebar-header {
+  font-weight: 600;
+}
+
+.sidebar-section {
+  border-top: var(--border) solid var(--border-color);
+  padding-top: var(--line-height);
+}
+
+.sidebar-section > * + * {
+  margin-top: 0;
+}
+
+.sidebar-section-title {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: calc(var(--line-height) / 2);
+}
+
+.sidebar-field {
+  display: flex;
+  justify-content: space-between;
+  padding: calc(var(--line-height) / 4) 0;
+  border-bottom: 1px dotted var(--border-color);
+}
+
+.sidebar-field:last-child {
+  border-bottom: none;
+}
+
+.sidebar-comment {
+  padding: calc(var(--line-height) / 2) 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.sidebar-comment:last-child {
+  border-bottom: none;
+}
+
+.sidebar-comment > * + * {
+  margin-top: calc(var(--line-height) / 4);
+}
+
+/* When sidebar is open, shrink the main content */
+body.sidebar-open {
+  margin-right: 40ch;
+}
+
 /* ── Shortcut help grid ── */
 
 .shortcut-grid {
