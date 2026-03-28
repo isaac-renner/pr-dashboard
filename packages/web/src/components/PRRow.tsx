@@ -63,7 +63,7 @@ export function PRRow({ pr }: PRRowProps) {
           #{pr.number} {pr.title}
         </a>
         <div className="muted">
-          {pr.headRefName} · {pr.isDraft ? "Draft" : "Open"} · {timeAgo(pr.updatedAt)}
+          {pr.headRefName} · {timeAgo(pr.updatedAt)}
         </div>
       </div>
 
