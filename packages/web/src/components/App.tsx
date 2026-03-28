@@ -47,6 +47,12 @@ export function App() {
 
   function moveSelection(delta: number) {
     if (displayOrder.length === 0) return;
+    if (delta < 0 && (selectedIndex === 0 || selectedIndex === -1)) {
+      // At top or no selection — focus search
+      setSelectedUrl(null);
+      filterInputRef.current?.focus();
+      return;
+    }
     const next = selectedIndex === -1
       ? (delta > 0 ? 0 : displayOrder.length - 1)
       : Math.max(0, Math.min(selectedIndex + delta, displayOrder.length - 1));
@@ -54,59 +60,25 @@ export function App() {
   }
 
   const shortcuts: ReadonlyArray<ShortcutDef> = useMemo(() => [
-    { keys: "j", label: "Move down", action: () => moveSelection(1) },
-    { keys: "k", label: "Move up", action: () => moveSelection(-1) },
-    {
-      keys: "o",
-      label: "Open PR",
-      action: () => { if (selectedPR) window.open(selectedPR.url, "_blank"); },
-    },
-    {
-      keys: "p",
-      label: "Open pipeline",
-      action: () => { if (selectedPR?.pipelineUrl) window.open(selectedPR.pipelineUrl, "_blank"); },
-    },
+    { keys: "j", label: "Move down", action: () => moveSelection(1), group: "Navigation" },
+    { keys: "k", label: "Move up / focus search", action: () => moveSelection(-1), group: "Navigation" },
+    { keys: "o", label: "Open PR", action: () => { if (selectedPR) window.open(selectedPR.url, "_blank"); }, group: "Navigation" },
+    { keys: "p", label: "Open pipeline", action: () => { if (selectedPR?.pipelineUrl) window.open(selectedPR.pipelineUrl, "_blank"); }, group: "Navigation" },
 
-    { keys: "g r", label: "Group by repo", action: () => setGroup(Option.some("repo")) },
-    { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
-    { keys: "g s", label: "Group by stack", action: () => setGroup(Option.some("stack")) },
-    { keys: "g n", label: "No grouping", action: () => setGroup(Option.some("none")) },
+    { keys: "g r", label: "Repo", action: () => setGroup(Option.some("repo")), group: "Group by" },
+    { keys: "g k", label: "Ticket", action: () => setGroup(Option.some("ticket")), group: "Group by" },
+    { keys: "g s", label: "Stack", action: () => setGroup(Option.some("stack")), group: "Group by" },
+    { keys: "g n", label: "None", action: () => setGroup(Option.some("none")), group: "Group by" },
 
-    {
-      keys: "z o",
-      label: "Open all folds",
-      action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = true),
-    },
-    {
-      keys: "z c",
-      label: "Close all folds",
-      action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = false),
-    },
+    { keys: "z o", label: "Open all folds", action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = true), group: "Folds" },
+    { keys: "z c", label: "Close all folds", action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = false), group: "Folds" },
 
-    { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },
-    { keys: "f r", label: "Open repo filter", action: () => repoFilterRef.current?.click() },
-    {
-      keys: "Shift+f",
-      label: "Clear all filters",
-      action: () => {
-        setSearch(Option.some(""));
-        setSelectedRepos([]);
-        setSelectedPipelines([]);
-        setSelectedReviews([]);
-      },
-    },
+    { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
+    { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
+    { keys: "Shift+f", label: "Clear all", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
 
-    { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
-    {
-      keys: "Escape",
-      label: "Close / deselect",
-      enableInInputs: true,
-      action: () => {
-        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-        setHelpOpen(false);
-        setSelectedUrl(null);
-      },
-    },
+    { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
+    { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setSelectedUrl(null); }, group: "General" },
   ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedUrl, displayOrder, selectedIndex, selectedPR]);
 
   const pending = useShortcuts(shortcuts);

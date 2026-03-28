@@ -28,6 +28,8 @@ export interface ShortcutDef {
   readonly action: () => void;
   /** Fire even when focus is in an input/textarea/select */
   readonly enableInInputs?: boolean;
+  /** Category for grouping in help overlay */
+  readonly group?: string | undefined;
 }
 
 interface ParsedPress {
