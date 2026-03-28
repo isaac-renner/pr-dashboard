@@ -370,7 +370,7 @@ details > summary {
 }
 
 .group-fold {
-  padding: calc(var(--line-height) / 2) 1ch;
+  padding: 0 1ch;
   margin-top: 0;
 }
 
@@ -385,7 +385,7 @@ details > summary {
 summary {
   cursor: pointer;
   user-select: none;
-  padding: 0;
+  padding: calc(var(--line-height) / 2) 0;
   line-height: var(--line-height);
   font-weight: 600;
   list-style: none;
