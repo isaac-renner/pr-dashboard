@@ -232,6 +232,7 @@ kbd {
   z-index: 20;
   top: 100%;
   left: 0;
+  right: auto;
   margin-top: 0;
   background: var(--bg);
   border: var(--border) solid var(--border-color);
@@ -239,6 +240,11 @@ kbd {
   min-width: 30ch;
   max-height: calc(var(--line-height) * 20);
   overflow-y: auto;
+}
+
+.popover-anchor:last-child > .popover {
+  left: auto;
+  right: 0;
 }
 
 .popover > * + * {
