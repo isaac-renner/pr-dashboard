@@ -112,15 +112,7 @@ const buildPrsResponse = Effect.gen(function*() {
 // -----------------------------------------------------------------------------
 
 async function main() {
-  // Initial backfill
-  await runtime.runPromise(refreshCache);
-
-  // Periodic refresh
-  setInterval(() => {
-    runtime.runPromise(refreshCache).catch((err) => console.error("Background refresh failed:", err));
-  }, REFRESH_INTERVAL_MS);
-
-  // HTTP Server
+  // Start HTTP server FIRST so it's ready when the frontend connects
   const server = Bun.serve({
     hostname: "0.0.0.0",
     port: PORT,
@@ -128,13 +120,23 @@ async function main() {
       const url = new URL(req.url);
 
       if (url.pathname === "/api/prs") {
-        const data = await runtime.runPromise(buildPrsResponse);
-        return Response.json(data);
+        try {
+          const data = await runtime.runPromise(buildPrsResponse);
+          return Response.json(data);
+        } catch (err) {
+          console.error("GET /api/prs failed:", err);
+          return Response.json({ error: String(err) }, { status: 500 });
+        }
       }
 
       if (url.pathname === "/api/refresh" && req.method === "POST") {
-        await runtime.runPromise(refreshCache);
-        return Response.json({ ok: true, lastRefreshed });
+        try {
+          await runtime.runPromise(refreshCache);
+          return Response.json({ ok: true, lastRefreshed });
+        } catch (err) {
+          console.error("POST /api/refresh failed:", err);
+          return Response.json({ error: String(err) }, { status: 500 });
+        }
       }
 
       // Dev: proxy to Vite dev server
@@ -162,6 +164,16 @@ async function main() {
   });
 
   console.log(`PR Dashboard running at http://0.0.0.0:${server.port}`);
+
+  // Now backfill — server is already accepting requests.
+  // GET /api/prs will return { prs: [], lastRefreshed: null } until this completes.
+  await runtime.runPromise(refreshCache);
+
+  // Periodic refresh
+  setInterval(() => {
+    runtime.runPromise(refreshCache).catch((err) => console.error("Background refresh failed:", err));
+  }, REFRESH_INTERVAL_MS);
+
   console.log(`Background refresh every ${REFRESH_INTERVAL_MS / 1000}s`);
 }
 

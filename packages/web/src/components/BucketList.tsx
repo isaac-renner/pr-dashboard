@@ -122,14 +122,20 @@ function BucketSection({
 
 // --- BucketList (reads from atoms) ---
 
-export function BucketList() {
+interface BucketListProps {
+  readonly bucketNowRef?: React.RefObject<HTMLDivElement | null>;
+  readonly bucketTodayRef?: React.RefObject<HTMLDivElement | null>;
+  readonly bucketDraftsRef?: React.RefObject<HTMLDivElement | null>;
+}
+
+export function BucketList({ bucketNowRef, bucketTodayRef, bucketDraftsRef }: BucketListProps) {
   const buckets = useAtomValue(bucketedPrsAtom);
   const filters = useAtomValue(filtersAtom);
 
-  const sections: Array<{ title: string; prs: PR[] }> = [
-    { title: "Address Now", prs: buckets.now },
-    { title: "Address Today", prs: buckets.today },
-    { title: "Drafts / TODOs", prs: buckets.drafts },
+  const sections: Array<{ title: string; prs: PR[]; ref?: React.RefObject<HTMLDivElement | null> | undefined }> = [
+    { title: "Address Now", prs: buckets.now, ref: bucketNowRef },
+    { title: "Address Today", prs: buckets.today, ref: bucketTodayRef },
+    { title: "Drafts / TODOs", prs: buckets.drafts, ref: bucketDraftsRef },
   ];
 
   const nonEmpty = sections.filter((s) => s.prs.length > 0);
@@ -141,12 +147,13 @@ export function BucketList() {
   return (
     <>
       {nonEmpty.map((s) => (
-        <BucketSection
-          key={s.title}
-          title={s.title}
-          prs={s.prs}
-          group={filters.group}
-        />
+        <div key={s.title} ref={s.ref}>
+          <BucketSection
+            title={s.title}
+            prs={s.prs}
+            group={filters.group}
+          />
+        </div>
       ))}
     </>
   );

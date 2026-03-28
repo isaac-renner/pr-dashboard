@@ -1,38 +1,36 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
-import React, { useState } from "react";
-import { excludeAtom, filtersAtom, groupAtom, pipelineAtom, repoAtom } from "../atoms/filters.js";
+import React from "react";
+import { excludeAtom, groupAtom, pipelineAtom, repoAtom } from "../atoms/filters.js";
 import type { Filters } from "../lib/types.js";
 
-export function FilterBar() {
-  const filters = useAtomValue(filtersAtom);
+interface FilterBarProps {
+  readonly filterInputRef?: React.RefObject<HTMLInputElement | null>;
+}
+
+export function FilterBar({ filterInputRef }: FilterBarProps) {
+  const exclude = useAtomValue(excludeAtom);
+  const repo = useAtomValue(repoAtom);
+  const pipeline = useAtomValue(pipelineAtom);
+  const group = useAtomValue(groupAtom);
   const setExclude = useAtomSet(excludeAtom);
   const setRepo = useAtomSet(repoAtom);
   const setPipeline = useAtomSet(pipelineAtom);
   const setGroup = useAtomSet(groupAtom);
 
-  // Local form state — only commits to atoms on Apply
-  const [localExclude, setLocalExclude] = useState(filters.exclude);
-  const [localRepo, setLocalRepo] = useState(filters.repo);
-  const [localPipeline, setLocalPipeline] = useState(filters.pipeline);
-  const [localGroup, setLocalGroup] = useState(filters.group);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setExclude(Option.some(localExclude));
-    setRepo(Option.some(localRepo));
-    setPipeline(Option.some(localPipeline));
-    setGroup(Option.some(localGroup));
-  }
+  const excludeVal = exclude._tag === "Some" ? exclude.value : "";
+  const repoVal = repo._tag === "Some" ? repo.value : "";
+  const pipelineVal = pipeline._tag === "Some" ? pipeline.value : "all";
+  const groupVal = group._tag === "Some" ? group.value : "ticket";
 
   return (
-    <form className="filters" onSubmit={handleSubmit}>
+    <div className="filters">
       <label>
         Exclude keywords (comma-separated)
         <input
           type="text"
-          value={localExclude}
-          onChange={(e) => setLocalExclude(e.target.value)}
+          value={excludeVal}
+          onChange={(e) => setExclude(Option.some(e.target.value))}
           placeholder="endpoint audit, loki"
         />
       </label>
@@ -40,9 +38,10 @@ export function FilterBar() {
       <label>
         Filter by repo
         <input
+          ref={filterInputRef}
           type="text"
-          value={localRepo}
-          onChange={(e) => setLocalRepo(e.target.value)}
+          value={repoVal}
+          onChange={(e) => setRepo(Option.some(e.target.value))}
           placeholder="e.g. frontend"
         />
       </label>
@@ -50,8 +49,8 @@ export function FilterBar() {
       <label>
         Group by
         <select
-          value={localGroup}
-          onChange={(e) => setLocalGroup(e.target.value as Filters["group"])}
+          value={groupVal}
+          onChange={(e) => setGroup(Option.some(e.target.value))}
         >
           <option value="ticket">Ticket</option>
           <option value="repo">Repo</option>
@@ -61,8 +60,8 @@ export function FilterBar() {
       <label>
         Pipeline
         <select
-          value={localPipeline}
-          onChange={(e) => setLocalPipeline(e.target.value as Filters["pipeline"])}
+          value={pipelineVal}
+          onChange={(e) => setPipeline(Option.some(e.target.value))}
         >
           <option value="all">Any</option>
           <option value="failing">Failing</option>
@@ -71,8 +70,6 @@ export function FilterBar() {
           <option value="none">No pipeline</option>
         </select>
       </label>
-
-      <button type="submit">Apply</button>
-    </form>
+    </div>
   );
 }
