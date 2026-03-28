@@ -54,6 +54,6 @@ export interface PR {
 export interface Filters {
   search: string;
   repos: ReadonlyArray<string>;
-  pipeline: "all" | "failing" | "pending" | "passing" | "none";
+  pipelines: ReadonlyArray<string>;
   group: "ticket" | "repo" | "stack";
 }

@@ -47,22 +47,13 @@ export function filterPRs(prs: PR[], filters: Filters): PR[] {
       // Repo filter (multi-select)
       if (filters.repos.length > 0 && !filters.repos.includes(pr.repository.name)) return false;
 
-      // Pipeline filter
-      if (filters.pipeline !== "all") {
-        switch (filters.pipeline) {
-          case "failing":
-            if (pr.pipelineState !== "FAILURE") return false;
-            break;
-          case "pending":
-            if (pr.pipelineState !== "PENDING") return false;
-            break;
-          case "passing":
-            if (pr.pipelineState !== "SUCCESS") return false;
-            break;
-          case "none":
-            if (pr.pipelineState !== null) return false;
-            break;
-        }
+      // Pipeline filter (multi-select)
+      if (filters.pipelines.length > 0) {
+        const prPipeline = pr.pipelineState === "SUCCESS" ? "Passing"
+          : pr.pipelineState === "FAILURE" ? "Failing"
+          : pr.pipelineState === "PENDING" ? "Pending"
+          : "None";
+        if (!filters.pipelines.includes(prPipeline)) return false;
       }
 
       return true;

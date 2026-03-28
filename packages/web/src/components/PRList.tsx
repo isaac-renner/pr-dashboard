@@ -17,11 +17,8 @@ function ColumnHeaders() {
       <div>PR</div>
       <div>Review</div>
       <div>Pipeline</div>
-      <div className="hide-md">Deploy</div>
       <div>Conflicts</div>
       <div>Comments</div>
-      <div className="hide-md">Ticket</div>
-      <div>Sessions</div>
     </div>
   );
 }

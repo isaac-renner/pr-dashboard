@@ -3,7 +3,7 @@ import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useMemo, useRef, useState } from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
-import { filtersAtom, groupAtom, pipelineAtom, searchAtom, selectedReposAtom } from "../atoms/filters.js";
+import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
 import { lastRefreshedAtom, prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { timeAgo } from "../lib/format.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
@@ -20,10 +20,11 @@ export function App() {
   const setGroup = useAtomSet(groupAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
-  const setPipeline = useAtomSet(pipelineAtom);
+  const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
 
   const [helpOpen, setHelpOpen] = useState(false);
   const filterInputRef = useRef<HTMLInputElement>(null);
+  const repoFilterRef = useRef<HTMLButtonElement>(null);
 
   const shortcuts: ReadonlyArray<ShortcutDef> = useMemo(() => [
     // Grouping
@@ -31,22 +32,23 @@ export function App() {
     { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
     { keys: "g s", label: "Group by stack", action: () => setGroup(Option.some("stack")) },
 
-    // Actions
+    // Filters
     { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },
+    { keys: "f r", label: "Open repo filter", action: () => repoFilterRef.current?.click() },
     {
       keys: "Shift+f",
       label: "Clear all filters",
       action: () => {
         setSearch(Option.some(""));
         setSelectedRepos([]);
-        setPipeline(Option.some("all"));
+        setSelectedPipelines([]);
       },
     },
 
     // Help
     { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
     { keys: "Escape", label: "Close overlay", action: () => setHelpOpen(false), enableInInputs: true },
-  ], [setGroup, setSearch, setSelectedRepos, setPipeline]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines]);
 
   const pending = useShortcuts(shortcuts);
 
@@ -78,7 +80,7 @@ export function App() {
         </div>
       </div>
 
-      <FilterBar filterInputRef={filterInputRef} />
+      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} />
 
       <div id="content">
         {loading && !prs.length && (

@@ -1,20 +1,28 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import React, { useEffect, useRef, useState } from "react";
-import { availableReposAtom } from "../atoms/derived.js";
-import { selectedReposAtom } from "../atoms/filters.js";
 import { fuzzyMatch } from "../lib/filters.js";
 
-export function RepoFilter() {
-  const availableRepos = useAtomValue(availableReposAtom);
-  const selectedRepos = useAtomValue(selectedReposAtom);
-  const setSelectedRepos = useAtomSet(selectedReposAtom);
+interface ChipFilterPopoverProps {
+  readonly label: string;
+  readonly options: ReadonlyArray<string>;
+  readonly selected: ReadonlyArray<string>;
+  readonly onToggle: (value: string) => void;
+  readonly onClear: () => void;
+  readonly triggerRef?: React.RefObject<HTMLButtonElement | null> | undefined;
+}
 
+export function ChipFilterPopover({
+  label,
+  options,
+  selected,
+  onToggle,
+  onClear,
+  triggerRef,
+}: ChipFilterPopoverProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus search input when popover opens
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0);
@@ -23,7 +31,6 @@ export function RepoFilter() {
     }
   }, [open]);
 
-  // Close on click outside
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
@@ -42,30 +49,23 @@ export function RepoFilter() {
     };
   }, [open]);
 
-  function toggleRepo(repo: string) {
-    setSelectedRepos((current) =>
-      current.includes(repo)
-        ? current.filter((r) => r !== repo)
-        : [...current, repo]
-    );
-  }
-
   const filtered = query
-    ? availableRepos.filter((r) => fuzzyMatch(query, r))
-    : availableRepos;
+    ? options.filter((o) => fuzzyMatch(query, o))
+    : options;
 
-  const label = selectedRepos.length > 0
-    ? `Repos (${selectedRepos.length})`
-    : "Repos";
+  const displayLabel = selected.length > 0
+    ? `${label} (${selected.length})`
+    : label;
 
   return (
     <div className="repo-filter" ref={containerRef}>
       <button
-        className={`repo-filter-trigger${selectedRepos.length > 0 ? " active" : ""}`}
+        ref={triggerRef}
+        className={`repo-filter-trigger${selected.length > 0 ? " active" : ""}`}
         onClick={() => setOpen((o) => !o)}
         type="button"
       >
-        {label}
+        {displayLabel}
       </button>
 
       {open && (
@@ -76,27 +76,27 @@ export function RepoFilter() {
             className="repo-filter-search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="filter repos..."
+            placeholder={`filter ${label.toLowerCase()}...`}
           />
           <div className="repo-filter-list">
-            {filtered.map((repo) => (
+            {filtered.map((option) => (
               <button
-                key={repo}
-                className={`repo-chip${selectedRepos.includes(repo) ? " active" : ""}`}
-                onClick={() => toggleRepo(repo)}
+                key={option}
+                className={`repo-chip${selected.includes(option) ? " active" : ""}`}
+                onClick={() => onToggle(option)}
                 type="button"
               >
-                {repo}
+                {option}
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="repo-filter-empty">No repos match</div>
+              <div className="repo-filter-empty">No matches</div>
             )}
           </div>
-          {selectedRepos.length > 0 && (
+          {selected.length > 0 && (
             <button
               className="repo-filter-clear"
-              onClick={() => setSelectedRepos([])}
+              onClick={onClear}
               type="button"
             >
               Clear selection
