@@ -4,17 +4,29 @@
   "workspaces": [
     "packages/*"
   ],
+  "scripts": {
+    "prepare": "effect-language-service patch",
+    "lint": "eslint .",
+    "codegen": "graphql-codegen --config packages/github-graphql/codegen.ts",
+    "check": "tsc --project packages/shared/tsconfig.json --noEmit && tsc --project packages/github-app/tsconfig.json --noEmit && tsc --project packages/github-graphql/tsconfig.json --noEmit && tsc --project packages/server/tsconfig.json --noEmit && tsc --project packages/web/tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@effect/atom-react": "^4.0.0-beta.42",
     "effect": "^4.0.0-beta.0"
   },
   "devDependencies": {
+    "@effect/eslint-plugin": "^0.3.2",
+    "@effect/language-service": "^0.84.1",
+    "@effect/vitest": "^0.29.0",
     "@graphql-codegen/cli": "^6.2.1",
     "@graphql-codegen/client-preset": "^5.2.4",
     "@graphql-codegen/typed-document-node": "^6.1.7",
     "@graphql-codegen/typescript": "^5.0.9",
     "@graphql-codegen/typescript-operations": "^5.0.9",
     "@types/bun": "^1.3.11",
+    "@typescript-eslint/parser": "^8.57.2",
+    "@typescript-eslint/utils": "^8.57.2",
+    "eslint": "^10.1.0",
     "graphql": "^16.13.2",
     "typescript": "^6.0.2"
   }

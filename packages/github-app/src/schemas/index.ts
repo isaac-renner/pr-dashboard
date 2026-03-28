@@ -1,55 +1,39 @@
 export {
-  // Common
-  WebhookUser,
-  WebhookRepository,
-  WebhookInstallation,
-
-  // pull_request
-  PullRequestAction,
-  WebhookPullRequest,
-  PullRequestEvent,
-
-  // pull_request_review
-  PullRequestReviewAction,
-  WebhookReview,
-  PullRequestReviewEvent,
-
-  // pull_request_review_thread
-  PullRequestReviewThreadAction,
-  WebhookReviewThread,
-  PullRequestReviewThreadEvent,
-
-  // pull_request_review_comment
-  PullRequestReviewCommentAction,
-  WebhookReviewComment,
-  PullRequestReviewCommentEvent,
-
-  // check_suite
-  CheckSuiteAction,
-  WebhookCheckSuite,
-  CheckSuiteEvent,
-
   // check_run
   CheckRunAction,
-  WebhookCheckRun,
   CheckRunEvent,
-
-  // status
-  StatusEvent,
-
+  // check_suite
+  CheckSuiteAction,
+  CheckSuiteEvent,
+  type HandledEventName,
   // Registry
   HandledEvents,
-  type HandledEventName,
-} from "./WebhookEvents.js"
+  // pull_request
+  PullRequestAction,
+  PullRequestEvent,
+  // pull_request_review
+  PullRequestReviewAction,
+  // pull_request_review_comment
+  PullRequestReviewCommentAction,
+  PullRequestReviewCommentEvent,
+  PullRequestReviewEvent,
+  // pull_request_review_thread
+  PullRequestReviewThreadAction,
+  PullRequestReviewThreadEvent,
+  // status
+  StatusEvent,
+  WebhookCheckRun,
+  WebhookCheckSuite,
+  WebhookInstallation,
+  WebhookPullRequest,
+  WebhookRepository,
+  WebhookReview,
+  WebhookReviewComment,
+  WebhookReviewThread,
+  // Common
+  WebhookUser,
+} from "./WebhookEvents.js";
 
-export {
-  type PermissionEntry,
-  EventPermissions,
-} from "./Permissions.js"
+export { EventPermissions, type PermissionEntry } from "./Permissions.js";
 
-export {
-  type GitHubAppManifest,
-  type ManifestConfig,
-  generateManifest,
-  detectDrift,
-} from "./Manifest.js"
+export { detectDrift, generateManifest, type GitHubAppManifest, type ManifestConfig } from "./Manifest.js";

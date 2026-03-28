@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 // -----------------------------------------------------------------------------
 // Sub-schemas
@@ -26,25 +26,29 @@ export class UnresolvedThread extends Schema.Class<UnresolvedThread>(
   replied: Schema.Boolean,
 }) {}
 
-export const PipelineState = Schema.Literals(["SUCCESS", "FAILURE", "PENDING"] as const)
-export type PipelineState = typeof PipelineState.Type
+export const PipelineState = Schema.Literals(["SUCCESS", "FAILURE", "PENDING"] as const);
+export type PipelineState = typeof PipelineState.Type;
 
-export const ReviewState = Schema.Literals([
-  "APPROVED",
-  "CHANGES_REQUESTED",
-  "PENDING",
-] as const)
-export type ReviewState = typeof ReviewState.Type
+export const ReviewState = Schema.Literals(
+  [
+    "APPROVED",
+    "CHANGES_REQUESTED",
+    "PENDING",
+  ] as const,
+);
+export type ReviewState = typeof ReviewState.Type;
 
-export const PRState = Schema.Literals(["OPEN", "CLOSED", "MERGED"] as const)
-export type PRState = typeof PRState.Type
+export const PRState = Schema.Literals(["OPEN", "CLOSED", "MERGED"] as const);
+export type PRState = typeof PRState.Type;
 
-export const MergeableState = Schema.Literals([
-  "MERGEABLE",
-  "CONFLICTING",
-  "UNKNOWN",
-] as const)
-export type MergeableState = typeof MergeableState.Type
+export const MergeableState = Schema.Literals(
+  [
+    "MERGEABLE",
+    "CONFLICTING",
+    "UNKNOWN",
+  ] as const,
+);
+export type MergeableState = typeof MergeableState.Type;
 
 // -----------------------------------------------------------------------------
 // PR — the enriched pull request

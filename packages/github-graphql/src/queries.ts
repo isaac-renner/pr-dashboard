@@ -1,4 +1,4 @@
-import { graphql } from "./generated/gql.js"
+import { graphql } from "./generated/gql.js";
 
 export const PRFields = graphql(`
   fragment PRFields on PullRequest {
@@ -68,7 +68,7 @@ export const PRFields = graphql(`
       }
     }
   }
-`)
+`);
 
 export const BackfillOpenPRs = graphql(`
   query BackfillOpenPRs {
@@ -91,7 +91,7 @@ export const BackfillOpenPRs = graphql(`
       }
     }
   }
-`)
+`);
 
 export const SinglePR = graphql(`
   query SinglePR($owner: String!, $name: String!, $number: Int!) {
@@ -101,4 +101,4 @@ export const SinglePR = graphql(`
       }
     }
   }
-`)
+`);

@@ -1,49 +1,31 @@
 // Pure modules (no services, just functions)
 export {
-  enrichGraphQLNode,
-  computeReviewState,
-  computePipelineInfo,
-  computeUnresolvedThreads,
-  parseJiraTicket,
-  isBotAuthor,
-  type GQLNode,
-  type GQLStatusCheckRollup,
-  type GQLReviewThread,
   type AuthorRef,
-} from "./Enrichment.js"
+  computePipelineInfo,
+  computeReviewState,
+  computeUnresolvedThreads,
+  enrichGraphQLNode,
+  type GQLNode,
+  type GQLReviewThread,
+  type GQLStatusCheckRollup,
+  isBotAuthor,
+  parseJiraTicket,
+} from "./Enrichment.js";
 
 export {
   correlateSessions,
-  extractPRNumbers,
   directoryToRepoName,
+  extractPRNumbers,
   groupSessions,
   type OCSessionRaw,
-} from "./Correlation.js"
+} from "./Correlation.js";
 
 // Effect services
-export {
-  PRStore,
-  PRStoreLive,
-  type PRStoreShape,
-  type PRStoreEvent,
-} from "./PRStore.js"
+export { PRStore, type PRStoreEvent, PRStoreLive, type PRStoreShape } from "./PRStore.js";
 
-export {
-  GitHubClient,
-  GitHubClientLive,
-  type GitHubClientShape,
-} from "./GitHubClient.js"
+export { GitHubClient, GitHubClientLive, type GitHubClientShape } from "./GitHubClient.js";
 
 // Re-export the GraphQL client for layer composition
-export {
-  GitHubGraphQLClient,
-  GitHubGraphQLClientLive,
-  GraphQLRequestError,
-} from "@pr-dashboard/github-graphql"
+export { GitHubGraphQLClient, GitHubGraphQLClientLive, GraphQLRequestError } from "@pr-dashboard/github-graphql";
 
-export {
-  OpenCodeClient,
-  OpenCodeClientLive,
-  OpenCodeFetchError,
-  type OpenCodeClientShape,
-} from "./OpenCodeClient.js"
+export { OpenCodeClient, OpenCodeClientLive, type OpenCodeClientShape, OpenCodeFetchError } from "./OpenCodeClient.js";

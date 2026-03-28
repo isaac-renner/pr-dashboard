@@ -1,4 +1,4 @@
-import type { PR, Filters, Buckets } from "./types";
+import type { Buckets, Filters, PR } from "./types";
 
 /**
  * Apply all filters to the PR list. Always filters to state === "OPEN".
@@ -48,8 +48,7 @@ export function filterPRs(prs: PR[], filters: Filters): PR[] {
       return true;
     })
     .sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
 }
 

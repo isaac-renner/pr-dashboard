@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 // -----------------------------------------------------------------------------
 // Common sub-schemas shared across webhook payloads
@@ -33,16 +33,18 @@ export class WebhookInstallation extends Schema.Class<WebhookInstallation>(
 // pull_request event
 // -----------------------------------------------------------------------------
 
-export const PullRequestAction = Schema.Literals([
-  "opened",
-  "closed",
-  "reopened",
-  "edited",
-  "synchronize",
-  "converted_to_draft",
-  "ready_for_review",
-] as const)
-export type PullRequestAction = typeof PullRequestAction.Type
+export const PullRequestAction = Schema.Literals(
+  [
+    "opened",
+    "closed",
+    "reopened",
+    "edited",
+    "synchronize",
+    "converted_to_draft",
+    "ready_for_review",
+  ] as const,
+);
+export type PullRequestAction = typeof PullRequestAction.Type;
 
 export class WebhookPullRequest extends Schema.Class<WebhookPullRequest>(
   "WebhookPullRequest",
@@ -81,8 +83,8 @@ export class PullRequestEvent extends Schema.Class<PullRequestEvent>(
 // pull_request_review event
 // -----------------------------------------------------------------------------
 
-export const PullRequestReviewAction = Schema.Literals(["submitted", "dismissed"] as const)
-export type PullRequestReviewAction = typeof PullRequestReviewAction.Type
+export const PullRequestReviewAction = Schema.Literals(["submitted", "dismissed"] as const);
+export type PullRequestReviewAction = typeof PullRequestReviewAction.Type;
 
 export class WebhookReview extends Schema.Class<WebhookReview>(
   "WebhookReview",
@@ -110,12 +112,13 @@ export class PullRequestReviewEvent extends Schema.Class<PullRequestReviewEvent>
 // pull_request_review_thread event
 // -----------------------------------------------------------------------------
 
-export const PullRequestReviewThreadAction = Schema.Literals([
-  "resolved",
-  "unresolved",
-] as const)
-export type PullRequestReviewThreadAction =
-  typeof PullRequestReviewThreadAction.Type
+export const PullRequestReviewThreadAction = Schema.Literals(
+  [
+    "resolved",
+    "unresolved",
+  ] as const,
+);
+export type PullRequestReviewThreadAction = typeof PullRequestReviewThreadAction.Type;
 
 export class WebhookReviewThread extends Schema.Class<WebhookReviewThread>(
   "WebhookReviewThread",
@@ -139,13 +142,14 @@ export class PullRequestReviewThreadEvent extends Schema.Class<PullRequestReview
 // pull_request_review_comment event
 // -----------------------------------------------------------------------------
 
-export const PullRequestReviewCommentAction = Schema.Literals([
-  "created",
-  "edited",
-  "deleted",
-] as const)
-export type PullRequestReviewCommentAction =
-  typeof PullRequestReviewCommentAction.Type
+export const PullRequestReviewCommentAction = Schema.Literals(
+  [
+    "created",
+    "edited",
+    "deleted",
+  ] as const,
+);
+export type PullRequestReviewCommentAction = typeof PullRequestReviewCommentAction.Type;
 
 export class WebhookReviewComment extends Schema.Class<WebhookReviewComment>(
   "WebhookReviewComment",
@@ -174,12 +178,14 @@ export class PullRequestReviewCommentEvent extends Schema.Class<PullRequestRevie
 // check_suite event
 // -----------------------------------------------------------------------------
 
-export const CheckSuiteAction = Schema.Literals([
-  "completed",
-  "requested",
-  "rerequested",
-] as const)
-export type CheckSuiteAction = typeof CheckSuiteAction.Type
+export const CheckSuiteAction = Schema.Literals(
+  [
+    "completed",
+    "requested",
+    "rerequested",
+  ] as const,
+);
+export type CheckSuiteAction = typeof CheckSuiteAction.Type;
 
 export class WebhookCheckSuite extends Schema.Class<WebhookCheckSuite>(
   "WebhookCheckSuite",
@@ -212,13 +218,15 @@ export class CheckSuiteEvent extends Schema.Class<CheckSuiteEvent>(
 // check_run event
 // -----------------------------------------------------------------------------
 
-export const CheckRunAction = Schema.Literals([
-  "completed",
-  "created",
-  "rerequested",
-  "requested_action",
-] as const)
-export type CheckRunAction = typeof CheckRunAction.Type
+export const CheckRunAction = Schema.Literals(
+  [
+    "completed",
+    "created",
+    "rerequested",
+    "requested_action",
+  ] as const,
+);
+export type CheckRunAction = typeof CheckRunAction.Type;
 
 export class WebhookCheckRun extends Schema.Class<WebhookCheckRun>(
   "WebhookCheckRun",
@@ -279,6 +287,6 @@ export const HandledEvents = {
   check_suite: CheckSuiteEvent,
   check_run: CheckRunEvent,
   status: StatusEvent,
-} as const satisfies Record<string, Schema.Schema<any>>
+} as const satisfies Record<string, Schema.Schema<any>>;
 
-export type HandledEventName = keyof typeof HandledEvents
+export type HandledEventName = keyof typeof HandledEvents;

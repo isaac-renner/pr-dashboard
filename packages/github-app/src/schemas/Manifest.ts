@@ -1,5 +1,5 @@
-import { HandledEvents, type HandledEventName } from "./WebhookEvents.js"
-import { EventPermissions } from "./Permissions.js"
+import { EventPermissions } from "./Permissions.js";
+import { type HandledEventName, HandledEvents } from "./WebhookEvents.js";
 
 // -----------------------------------------------------------------------------
 // GitHub App Manifest
@@ -12,24 +12,24 @@ import { EventPermissions } from "./Permissions.js"
 // -----------------------------------------------------------------------------
 
 export interface GitHubAppManifest {
-  readonly name: string
-  readonly url: string
+  readonly name: string;
+  readonly url: string;
   readonly hook_attributes: {
-    readonly url: string
-    readonly active: boolean
-  }
-  readonly redirect_url?: string
-  readonly public: boolean
-  readonly default_permissions: Record<string, string>
-  readonly default_events: ReadonlyArray<string>
+    readonly url: string;
+    readonly active: boolean;
+  };
+  readonly redirect_url?: string;
+  readonly public: boolean;
+  readonly default_permissions: Record<string, string>;
+  readonly default_events: ReadonlyArray<string>;
 }
 
 export interface ManifestConfig {
-  readonly name: string
-  readonly url: string
-  readonly webhookUrl: string
-  readonly redirectUrl?: string | undefined
-  readonly isPublic?: boolean | undefined
+  readonly name: string;
+  readonly url: string;
+  readonly webhookUrl: string;
+  readonly redirectUrl?: string | undefined;
+  readonly isPublic?: boolean | undefined;
 }
 
 /**
@@ -38,21 +38,21 @@ export interface ManifestConfig {
  * app on GitHub should match this output.
  */
 export function generateManifest(config: ManifestConfig): GitHubAppManifest {
-  const eventNames = Object.keys(HandledEvents) as ReadonlyArray<HandledEventName>
+  const eventNames = Object.keys(HandledEvents) as ReadonlyArray<HandledEventName>;
 
   // Deduplicate and escalate permissions (write > read)
-  const permissions: Record<string, string> = {}
+  const permissions: Record<string, string> = {};
   for (const event of eventNames) {
-    const entry = EventPermissions[event]
-    const current = permissions[entry.permission]
+    const entry = EventPermissions[event];
+    const current = permissions[entry.permission];
     if (!current || (entry.access === "write" && current === "read")) {
-      permissions[entry.permission] = entry.access
+      permissions[entry.permission] = entry.access;
     }
   }
 
   // metadata:read is always required for GitHub Apps
   if (!permissions["metadata"]) {
-    permissions["metadata"] = "read"
+    permissions["metadata"] = "read";
   }
 
   return {
@@ -66,7 +66,7 @@ export function generateManifest(config: ManifestConfig): GitHubAppManifest {
     public: config.isPublic ?? false,
     default_permissions: permissions,
     default_events: [...eventNames],
-  }
+  };
 }
 
 /**
@@ -76,45 +76,45 @@ export function generateManifest(config: ManifestConfig): GitHubAppManifest {
 export function detectDrift(
   expected: GitHubAppManifest,
   actual: {
-    readonly permissions: Record<string, string>
-    readonly events: ReadonlyArray<string>
+    readonly permissions: Record<string, string>;
+    readonly events: ReadonlyArray<string>;
   },
 ): ReadonlyArray<string> {
-  const drifts: Array<string> = []
+  const drifts: Array<string> = [];
 
   // Check permissions
   for (const [perm, access] of Object.entries(expected.default_permissions)) {
-    const actualAccess = actual.permissions[perm]
+    const actualAccess = actual.permissions[perm];
     if (!actualAccess) {
-      drifts.push(`Missing permission: ${perm} (need ${access})`)
+      drifts.push(`Missing permission: ${perm} (need ${access})`);
     } else if (actualAccess !== access) {
       drifts.push(
         `Permission ${perm}: expected ${access}, got ${actualAccess}`,
-      )
+      );
     }
   }
 
   // Check for extra permissions on the actual app
   for (const perm of Object.keys(actual.permissions)) {
     if (!(perm in expected.default_permissions)) {
-      drifts.push(`Extra permission on app: ${perm} (not in code)`)
+      drifts.push(`Extra permission on app: ${perm} (not in code)`);
     }
   }
 
   // Check events
-  const expectedEvents = new Set(expected.default_events)
-  const actualEvents = new Set(actual.events)
+  const expectedEvents = new Set(expected.default_events);
+  const actualEvents = new Set(actual.events);
 
   for (const event of expectedEvents) {
     if (!actualEvents.has(event)) {
-      drifts.push(`Missing event subscription: ${event}`)
+      drifts.push(`Missing event subscription: ${event}`);
     }
   }
   for (const event of actualEvents) {
     if (!expectedEvents.has(event)) {
-      drifts.push(`Extra event subscription on app: ${event} (not in code)`)
+      drifts.push(`Extra event subscription on app: ${event} (not in code)`);
     }
   }
 
-  return drifts
+  return drifts;
 }

@@ -1,13 +1,13 @@
-import React, { useState } from "react"
-import { useAtomValue } from "@effect/atom-react"
-import type { PR } from "../lib/types.js"
-import { groupByTicket, groupByRepo } from "../lib/filters.js"
-import { bucketedPrsAtom } from "../atoms/derived.js"
-import { filtersAtom } from "../atoms/filters.js"
-import { timeAgo } from "../lib/format.js"
-import { PRRow } from "./PRRow.js"
+import { useAtomValue } from "@effect/atom-react";
+import React, { useState } from "react";
+import { bucketedPrsAtom } from "../atoms/derived.js";
+import { filtersAtom } from "../atoms/filters.js";
+import { groupByRepo, groupByTicket } from "../lib/filters.js";
+import { timeAgo } from "../lib/format.js";
+import type { PR } from "../lib/types.js";
+import { PRRow } from "./PRRow.js";
 
-const JIRA_BASE = "https://ailo.atlassian.net/browse"
+const JIRA_BASE = "https://ailo.atlassian.net/browse";
 
 // --- Column headers ---
 
@@ -23,7 +23,7 @@ function ColumnHeaders() {
       <div className="hide-md">Ticket</div>
       <div>Sessions</div>
     </div>
-  )
+  );
 }
 
 // --- Group section (ticket or repo) ---
@@ -33,29 +33,27 @@ function GroupSection({
   prs,
   isTicketGroup,
 }: {
-  name: string
-  prs: PR[]
-  isTicketGroup: boolean
+  name: string;
+  prs: PR[];
+  isTicketGroup: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(false);
 
   const sorted = [...prs].sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  )
-  const latest = sorted[0]
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+  const latest = sorted[0];
 
-  const isNoTicket = name === "No ticket"
-  const ticketLink =
-    isTicketGroup && !isNoTicket ? (
+  const isNoTicket = name === "No ticket";
+  const ticketLink = isTicketGroup && !isNoTicket
+    ? (
       <span className="ticket-title">
         <a className="jira" href={`${JIRA_BASE}/${name}`} target="_blank" rel="noreferrer">
           {name}
         </a>
       </span>
-    ) : (
-      <span className="ticket-title">{name}</span>
     )
+    : <span className="ticket-title">{name}</span>;
 
   return (
     <div className={`ticket${collapsed ? " collapsed" : ""}`}>
@@ -68,20 +66,16 @@ function GroupSection({
           <span className="pill">
             {prs.length} PR{prs.length === 1 ? "" : "s"}
           </span>
-          {latest && (
-            <span className="pill">latest {timeAgo(latest.updatedAt)}</span>
-          )}
+          {latest && <span className="pill">latest {timeAgo(latest.updatedAt)}</span>}
           <span className="ticket-indicator" />
         </div>
         <div className="ticket-badges" />
       </div>
       <div className="ticket-body">
-        {sorted.map((pr) => (
-          <PRRow key={pr.url} pr={pr} />
-        ))}
+        {sorted.map((pr) => <PRRow key={pr.url} pr={pr} />)}
       </div>
     </div>
-  )
+  );
 }
 
 // --- Bucket section ---
@@ -91,13 +85,13 @@ function BucketSection({
   prs,
   group,
 }: {
-  title: string
-  prs: PR[]
-  group: "ticket" | "repo"
+  title: string;
+  prs: PR[];
+  group: "ticket" | "repo";
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(false);
 
-  const grouped = group === "ticket" ? groupByTicket(prs) : groupByRepo(prs)
+  const grouped = group === "ticket" ? groupByTicket(prs) : groupByRepo(prs);
 
   return (
     <div className={`bucket${collapsed ? " collapsed" : ""}`}>
@@ -123,25 +117,25 @@ function BucketSection({
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 // --- BucketList (reads from atoms) ---
 
 export function BucketList() {
-  const buckets = useAtomValue(bucketedPrsAtom)
-  const filters = useAtomValue(filtersAtom)
+  const buckets = useAtomValue(bucketedPrsAtom);
+  const filters = useAtomValue(filtersAtom);
 
   const sections: Array<{ title: string; prs: PR[] }> = [
     { title: "Address Now", prs: buckets.now },
     { title: "Address Today", prs: buckets.today },
     { title: "Drafts / TODOs", prs: buckets.drafts },
-  ]
+  ];
 
-  const nonEmpty = sections.filter((s) => s.prs.length > 0)
+  const nonEmpty = sections.filter((s) => s.prs.length > 0);
 
   if (nonEmpty.length === 0) {
-    return <p className="count">No PRs match filters</p>
+    return <p className="count">No PRs match filters</p>;
   }
 
   return (
@@ -155,5 +149,5 @@ export function BucketList() {
         />
       ))}
     </>
-  )
+  );
 }

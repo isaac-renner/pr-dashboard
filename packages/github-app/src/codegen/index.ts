@@ -1,1 +1,1 @@
-export { generateManifest, detectDrift } from "../schemas/Manifest.js"
+export { detectDrift, generateManifest } from "../schemas/Manifest.js";

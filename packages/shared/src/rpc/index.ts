@@ -1,8 +1,8 @@
 export {
-  PrsResponse,
-  RefreshResponse,
-  PRUpserted,
-  PRRemoved,
-  PRUpdateEvent,
   PrDashboardRpc,
-} from "./PrDashboardRpc.js"
+  PRRemoved,
+  PrsResponse,
+  PRUpdateEvent,
+  PRUpserted,
+  RefreshResponse,
+} from "./PrDashboardRpc.js";

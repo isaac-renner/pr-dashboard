@@ -1,5 +1,5 @@
-import { Effect, Schema, SchemaParser, ServiceMap } from "effect"
-import { HandledEvents, type HandledEventName } from "../schemas/WebhookEvents.js"
+import { Effect, Schema, SchemaParser, ServiceMap } from "effect";
+import { type HandledEventName, HandledEvents } from "../schemas/WebhookEvents.js";
 
 // -----------------------------------------------------------------------------
 // WebhookRouter service
@@ -9,7 +9,7 @@ import { HandledEvents, type HandledEventName } from "../schemas/WebhookEvents.j
 // -----------------------------------------------------------------------------
 
 export class WebhookRouteError {
-  readonly _tag = "WebhookRouteError"
+  readonly _tag = "WebhookRouteError";
   constructor(
     readonly message: string,
     readonly event: string,
@@ -22,15 +22,15 @@ export class WebhookRouteError {
  */
 export type WebhookHandler<E extends HandledEventName> = (
   payload: Schema.Schema.Type<(typeof HandledEvents)[E]>,
-) => Effect.Effect<void>
+) => Effect.Effect<void>;
 
 /**
  * A partial mapping of event names to their handlers.
  * Consumers only register handlers for events they care about.
  */
 export type WebhookHandlerMap = {
-  readonly [E in HandledEventName]?: WebhookHandler<E>
-}
+  readonly [E in HandledEventName]?: WebhookHandler<E>;
+};
 
 export interface WebhookRouterShape {
   /**
@@ -44,7 +44,7 @@ export interface WebhookRouterShape {
   readonly handle: (
     eventName: string,
     payload: unknown,
-  ) => Effect.Effect<void, WebhookRouteError>
+  ) => Effect.Effect<void, WebhookRouteError>;
 }
 
 export class WebhookRouter extends ServiceMap.Service<
@@ -69,18 +69,18 @@ export function makeWebhookRouter(
   return {
     handle: (eventName: string, payload: unknown): Effect.Effect<void, WebhookRouteError> => {
       if (!(eventName in HandledEvents)) {
-        return Effect.void
+        return Effect.void;
       }
 
-      const name = eventName as HandledEventName
-      const handler = handlers[name]
+      const name = eventName as HandledEventName;
+      const handler = handlers[name];
 
       if (!handler) {
-        return Effect.void
+        return Effect.void;
       }
 
-      const schema = HandledEvents[name]
-      const decode = SchemaParser.decodeUnknownEffect(schema)
+      const schema = HandledEvents[name];
+      const decode = SchemaParser.decodeUnknownEffect(schema);
 
       return decode(payload).pipe(
         Effect.mapError(
@@ -92,7 +92,7 @@ export function makeWebhookRouter(
             ),
         ),
         Effect.flatMap((decoded: any) => (handler as any)(decoded)),
-      ) as Effect.Effect<void, WebhookRouteError>
+      ) as Effect.Effect<void, WebhookRouteError>;
     },
-  }
+  };
 }

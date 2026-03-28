@@ -1,6 +1,6 @@
-import { Rpc, RpcGroup } from "effect/unstable/rpc"
-import { Schema } from "effect"
-import { PRWithSessions, PR } from "../schemas/index.js"
+import { Schema } from "effect";
+import { Rpc, RpcGroup } from "effect/unstable/rpc";
+import { PR, PRWithSessions } from "../schemas/index.js";
 
 // -----------------------------------------------------------------------------
 // Response schemas
@@ -32,8 +32,8 @@ export class PRRemoved extends Schema.TaggedClass<PRRemoved>()(
   { url: Schema.String },
 ) {}
 
-export const PRUpdateEvent = Schema.Union([PRUpserted, PRRemoved])
-export type PRUpdateEvent = typeof PRUpdateEvent.Type
+export const PRUpdateEvent = Schema.Union([PRUpserted, PRRemoved]);
+export type PRUpdateEvent = typeof PRUpdateEvent.Type;
 
 // -----------------------------------------------------------------------------
 // RPC group — the type-safe contract between frontend and backend

@@ -6,53 +6,64 @@
  * refreshAtom: callable atom that triggers POST /api/refresh then re-fetches.
  */
 
-import * as Atom from "effect/unstable/reactivity/Atom"
-import * as Effect from "effect/Effect"
-import type { PR } from "../lib/types.js"
+import { Data } from "effect";
+import * as Effect from "effect/Effect";
+import * as Atom from "effect/unstable/reactivity/Atom";
+import type { PR } from "../lib/types.js";
+
+// --- Errors ---
+
+class FetchPrsError extends Data.TaggedError("FetchPrsError")<{
+  readonly cause: unknown;
+}> {}
+
+class RefreshError extends Data.TaggedError("RefreshError")<{
+  readonly cause: unknown;
+}> {}
 
 // --- API response shape ---
 interface PrsApiResponse {
-  prs: PR[]
-  lastRefreshed: string | null
+  prs: PR[];
+  lastRefreshed: string | null;
 }
 
 // --- Source atom: fetches all PRs ---
 export const prsResponseAtom = Atom.make(
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     const res = yield* Effect.tryPromise({
       try: () => fetch("/api/prs"),
-      catch: () => new Error("Failed to fetch PRs"),
-    })
+      catch: (cause) => new FetchPrsError({ cause }),
+    });
     if (!res.ok) {
-      return yield* Effect.fail(new Error(`Failed to fetch PRs: ${res.status}`))
+      return yield* new FetchPrsError({ cause: `HTTP ${res.status}` });
     }
     const data: PrsApiResponse = yield* Effect.tryPromise({
       try: () => res.json() as Promise<PrsApiResponse>,
-      catch: () => new Error("Failed to parse PR response"),
-    })
-    return data
+      catch: (cause) => new FetchPrsError({ cause }),
+    });
+    return data;
   }),
-).pipe(Atom.keepAlive)
+).pipe(Atom.keepAlive);
 
 // --- Derived: just the PR array ---
 export const prsAtom = Atom.map(prsResponseAtom, (result) => {
-  if (result._tag === "Success") return result.value.prs
-  return [] as PR[]
-})
+  if (result._tag === "Success") return result.value.prs;
+  return [] as PR[];
+});
 
 // --- Derived: last refreshed timestamp ---
 export const lastRefreshedAtom = Atom.map(prsResponseAtom, (result) => {
-  if (result._tag === "Success") return result.value.lastRefreshed
-  return null as string | null
-})
+  if (result._tag === "Success") return result.value.lastRefreshed;
+  return null as string | null;
+});
 
 // --- Refresh: POST /api/refresh then re-fetch ---
 export const refreshAtom = Atom.fn((_: void, ctx) =>
-  Effect.gen(function* () {
+  Effect.gen(function*() {
     yield* Effect.tryPromise({
       try: () => fetch("/api/refresh", { method: "POST" }),
-      catch: () => new Error("Refresh failed"),
-    })
-    ctx.refresh(prsResponseAtom)
-  }),
-)
+      catch: (cause) => new RefreshError({ cause }),
+    });
+    ctx.refresh(prsResponseAtom);
+  })
+);

@@ -16,59 +16,63 @@
  *     bun run packages/github-app/src/codegen/check-drift.ts --stdin
  */
 
-import { generateManifest, detectDrift } from "../schemas/Manifest.js"
+import { detectDrift, generateManifest } from "../schemas/Manifest.js";
 
 async function main() {
-  const useStdin = process.argv.includes("--stdin")
+  const useStdin = process.argv.includes("--stdin");
 
   if (!useStdin) {
-    console.log("Usage: gh api /app --jq '{permissions, events}' | bun run check-drift.ts --stdin")
-    console.log("")
-    console.log("Expected manifest:")
+    console.log("Usage: gh api /app --jq '{permissions, events}' | bun run check-drift.ts --stdin");
+    console.log("");
+    console.log("Expected manifest:");
     const manifest = generateManifest({
       name: "PR Dashboard",
       url: "https://github.com/isaac-renner/pr-dashboard",
       webhookUrl: "https://example.com/webhooks/github",
-    })
-    console.log(JSON.stringify({
-      permissions: manifest.default_permissions,
-      events: manifest.default_events,
-    }, null, 2))
-    process.exit(0)
+    });
+    console.log(JSON.stringify(
+      {
+        permissions: manifest.default_permissions,
+        events: manifest.default_events,
+      },
+      null,
+      2,
+    ));
+    process.exit(0);
   }
 
   // Read from stdin
-  const chunks: Array<string> = []
+  const chunks: Array<string> = [];
   for await (const chunk of process.stdin) {
-    chunks.push(typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk))
+    chunks.push(typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk));
   }
-  const input = chunks.join("")
+  const input = chunks.join("");
   const actual = JSON.parse(input) as {
-    permissions: Record<string, string>
-    events: ReadonlyArray<string>
-  }
+    permissions: Record<string, string>;
+    events: ReadonlyArray<string>;
+  };
 
   const manifest = generateManifest({
     name: "PR Dashboard",
     url: "https://github.com/isaac-renner/pr-dashboard",
     webhookUrl: "https://example.com/webhooks/github",
-  })
+  });
 
-  const drifts = detectDrift(manifest, actual)
+  const drifts = detectDrift(manifest, actual);
 
   if (drifts.length === 0) {
-    console.log("✓ GitHub App config matches code. No drift detected.")
-    process.exit(0)
+    console.log("✓ GitHub App config matches code. No drift detected.");
+    process.exit(0);
   }
 
-  console.error("✗ GitHub App config drift detected:\n")
+  console.error("✗ GitHub App config drift detected:\n");
   for (const drift of drifts) {
-    console.error(`  - ${drift}`)
+    console.error(`  - ${drift}`);
   }
   console.error(
     "\nUpdate the app at https://github.com/settings/apps/<your-app> to match.",
-  )
-  process.exit(1)
+  );
+  process.exit(1);
 }
 
-main()
+main();

@@ -16,22 +16,21 @@
  * 3. Checked into source control as documentation of intent
  */
 
-import { generateManifest } from "../schemas/Manifest.js"
+import { generateManifest } from "../schemas/Manifest.js";
 
 function main() {
-  const args = process.argv.slice(2)
+  const args = process.argv.slice(2);
 
   const getArg = (flag: string): string | undefined => {
-    const idx = args.indexOf(flag)
-    return idx !== -1 ? args[idx + 1] : undefined
-  }
+    const idx = args.indexOf(flag);
+    return idx !== -1 ? args[idx + 1] : undefined;
+  };
 
-  const name = getArg("--name") ?? "PR Dashboard Dev"
-  const url = getArg("--url") ?? "https://github.com/isaac-renner/pr-dashboard"
-  const webhookUrl =
-    getArg("--webhook-url") ?? "https://example.com/webhooks/github"
-  const redirectUrl = getArg("--redirect-url")
-  const isPublic = args.includes("--public")
+  const name = getArg("--name") ?? "PR Dashboard Dev";
+  const url = getArg("--url") ?? "https://github.com/isaac-renner/pr-dashboard";
+  const webhookUrl = getArg("--webhook-url") ?? "https://example.com/webhooks/github";
+  const redirectUrl = getArg("--redirect-url");
+  const isPublic = args.includes("--public");
 
   const manifest = generateManifest({
     name,
@@ -39,9 +38,9 @@ function main() {
     webhookUrl,
     redirectUrl,
     isPublic,
-  })
+  });
 
-  console.log(JSON.stringify(manifest, null, 2))
+  console.log(JSON.stringify(manifest, null, 2));
 }
 
-main()
+main();

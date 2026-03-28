@@ -5,23 +5,23 @@
  * Filter changes = instant recompute, zero network.
  */
 
-import * as Atom from "effect/unstable/reactivity/Atom"
-import { prsAtom } from "./prs.js"
-import { filtersAtom } from "./filters.js"
-import { filterPRs, bucketize } from "../lib/filters.js"
-import type { PR, Buckets } from "../lib/types.js"
+import * as Atom from "effect/unstable/reactivity/Atom";
+import { bucketize, filterPRs } from "../lib/filters.js";
+import type { Buckets, PR } from "../lib/types.js";
+import { filtersAtom } from "./filters.js";
+import { prsAtom } from "./prs.js";
 
 // --- Filtered PRs ---
 
 export const filteredPrsAtom: Atom.Atom<PR[]> = Atom.make((get) => {
-  const prs = get(prsAtom)
-  const filters = get(filtersAtom)
-  return filterPRs(prs, filters)
-})
+  const prs = get(prsAtom);
+  const filters = get(filtersAtom);
+  return filterPRs(prs, filters);
+});
 
 // --- Bucketed PRs ---
 
 export const bucketedPrsAtom: Atom.Atom<Buckets> = Atom.make((get) => {
-  const filtered = get(filteredPrsAtom)
-  return bucketize(filtered)
-})
+  const filtered = get(filteredPrsAtom);
+  return bucketize(filtered);
+});

@@ -1,4 +1,4 @@
-import { Effect, ServiceMap } from "effect"
+import { Effect, ServiceMap } from "effect";
 
 // -----------------------------------------------------------------------------
 // WebhookVerifier service
@@ -8,7 +8,7 @@ import { Effect, ServiceMap } from "effect"
 // -----------------------------------------------------------------------------
 
 export class WebhookVerificationError {
-  readonly _tag = "WebhookVerificationError"
+  readonly _tag = "WebhookVerificationError";
   constructor(readonly message: string) {}
 }
 
@@ -20,7 +20,7 @@ export interface WebhookVerifierShape {
   readonly verify: (
     payload: string,
     signature: string,
-  ) => Effect.Effect<void, WebhookVerificationError>
+  ) => Effect.Effect<void, WebhookVerificationError>;
 }
 
 export class WebhookVerifier extends ServiceMap.Service<

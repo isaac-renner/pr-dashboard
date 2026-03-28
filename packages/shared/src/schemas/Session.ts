@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema } from "effect";
 
 // -----------------------------------------------------------------------------
 // OCSession — full session from the OpenCode API

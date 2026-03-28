@@ -1,4 +1,4 @@
-import type { HandledEventName } from "./WebhookEvents.js"
+import type { HandledEventName } from "./WebhookEvents.js";
 
 // -----------------------------------------------------------------------------
 // Event → GitHub App permission mapping
@@ -12,8 +12,8 @@ import type { HandledEventName } from "./WebhookEvents.js"
 // -----------------------------------------------------------------------------
 
 export interface PermissionEntry {
-  readonly permission: string
-  readonly access: "read" | "write"
+  readonly permission: string;
+  readonly access: "read" | "write";
 }
 
 export const EventPermissions: Record<HandledEventName, PermissionEntry> = {
@@ -24,4 +24,4 @@ export const EventPermissions: Record<HandledEventName, PermissionEntry> = {
   check_suite: { permission: "checks", access: "read" },
   check_run: { permission: "checks", access: "read" },
   status: { permission: "statuses", access: "read" },
-} satisfies Record<HandledEventName, PermissionEntry>
+} satisfies Record<HandledEventName, PermissionEntry>;

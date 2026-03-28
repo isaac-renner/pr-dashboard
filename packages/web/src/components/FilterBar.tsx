@@ -1,34 +1,28 @@
-import React, { useState } from "react"
-import { useAtomValue, useAtomSet } from "@effect/atom-react"
-import { Option } from "effect"
-import {
-  excludeAtom,
-  repoAtom,
-  pipelineAtom,
-  groupAtom,
-  filtersAtom,
-} from "../atoms/filters.js"
-import type { Filters } from "../lib/types.js"
+import { useAtomSet, useAtomValue } from "@effect/atom-react";
+import { Option } from "effect";
+import React, { useState } from "react";
+import { excludeAtom, filtersAtom, groupAtom, pipelineAtom, repoAtom } from "../atoms/filters.js";
+import type { Filters } from "../lib/types.js";
 
 export function FilterBar() {
-  const filters = useAtomValue(filtersAtom)
-  const setExclude = useAtomSet(excludeAtom)
-  const setRepo = useAtomSet(repoAtom)
-  const setPipeline = useAtomSet(pipelineAtom)
-  const setGroup = useAtomSet(groupAtom)
+  const filters = useAtomValue(filtersAtom);
+  const setExclude = useAtomSet(excludeAtom);
+  const setRepo = useAtomSet(repoAtom);
+  const setPipeline = useAtomSet(pipelineAtom);
+  const setGroup = useAtomSet(groupAtom);
 
   // Local form state — only commits to atoms on Apply
-  const [localExclude, setLocalExclude] = useState(filters.exclude)
-  const [localRepo, setLocalRepo] = useState(filters.repo)
-  const [localPipeline, setLocalPipeline] = useState(filters.pipeline)
-  const [localGroup, setLocalGroup] = useState(filters.group)
+  const [localExclude, setLocalExclude] = useState(filters.exclude);
+  const [localRepo, setLocalRepo] = useState(filters.repo);
+  const [localPipeline, setLocalPipeline] = useState(filters.pipeline);
+  const [localGroup, setLocalGroup] = useState(filters.group);
 
   function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setExclude(Option.some(localExclude))
-    setRepo(Option.some(localRepo))
-    setPipeline(Option.some(localPipeline))
-    setGroup(Option.some(localGroup))
+    e.preventDefault();
+    setExclude(Option.some(localExclude));
+    setRepo(Option.some(localRepo));
+    setPipeline(Option.some(localPipeline));
+    setGroup(Option.some(localGroup));
   }
 
   return (
@@ -80,5 +74,5 @@ export function FilterBar() {
 
       <button type="submit">Apply</button>
     </form>
-  )
+  );
 }
