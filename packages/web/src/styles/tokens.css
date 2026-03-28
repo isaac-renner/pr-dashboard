@@ -430,7 +430,7 @@ details[open] > summary::before {
 }
 
 .pr-row {
-  border-bottom: 1px dotted var(--border-color);
+  border-bottom: var(--border) dashed var(--border-color);
 }
 
 .pr-row:last-child {
