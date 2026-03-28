@@ -57,13 +57,18 @@ function parsePress(raw: string): ParsedPress {
 }
 
 function matchesEvent(event: KeyboardEvent, press: ParsedPress): boolean {
-  return (
-    event.key.toLowerCase() === press.key
-    && event.metaKey === press.meta
-    && event.ctrlKey === press.ctrl
-    && event.shiftKey === press.shift
-    && event.altKey === press.alt
-  );
+  if (event.key.toLowerCase() !== press.key) return false;
+  if (event.metaKey !== press.meta) return false;
+  if (event.ctrlKey !== press.ctrl) return false;
+  if (event.altKey !== press.alt) return false;
+  // Only check shiftKey if the shortcut explicitly requires a modifier.
+  // For printable characters like "?" that inherently need shift to type,
+  // we skip the shift check — otherwise "?" would never match since
+  // parsePress("?") has shift:false but the event always has shiftKey:true.
+  if (press.shift || press.meta || press.ctrl || press.alt) {
+    if (event.shiftKey !== press.shift) return false;
+  }
+  return true;
 }
 
 function isEditableTarget(el: EventTarget | null): boolean {
