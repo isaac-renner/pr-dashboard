@@ -1,28 +1,51 @@
-import type { Buckets, Filters, PR } from "./types";
+import type { Buckets, Filters, PR } from "./types.js";
+
+// -----------------------------------------------------------------------------
+// Fuzzy match — checks if all characters in query appear in order in target
+// -----------------------------------------------------------------------------
+
+export function fuzzyMatch(query: string, target: string): boolean {
+  const q = query.toLowerCase();
+  const t = target.toLowerCase();
+  let qi = 0;
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) qi++;
+  }
+  return qi === q.length;
+}
+
+/**
+ * Build a searchable string from a PR for fuzzy matching.
+ */
+function searchableText(pr: PR): string {
+  return [
+    `#${pr.number}`,
+    pr.title,
+    pr.repository.name,
+    pr.repository.nameWithOwner,
+    pr.headRefName,
+    pr.jiraTicket ?? "",
+  ].join(" ");
+}
+
+// -----------------------------------------------------------------------------
+// Filtering
+// -----------------------------------------------------------------------------
 
 /**
  * Apply all filters to the PR list. Always filters to state === "OPEN".
  * Sorts by updatedAt descending.
  */
 export function filterPRs(prs: PR[], filters: Filters): PR[] {
-  const excludeKeywords = filters.exclude
-    .split(",")
-    .map((k) => k.trim().toLowerCase())
-    .filter(Boolean);
-
   return prs
     .filter((pr) => {
-      // Always require OPEN state
       if (pr.state !== "OPEN") return false;
 
-      // Exclude keywords (match against title or branch)
-      if (excludeKeywords.length > 0) {
-        const text = `${pr.title} ${pr.headRefName}`.toLowerCase();
-        if (excludeKeywords.some((kw) => text.includes(kw))) return false;
-      }
+      // Fuzzy search
+      if (filters.search && !fuzzyMatch(filters.search, searchableText(pr))) return false;
 
-      // Repo filter
-      if (filters.repo && pr.repository.name !== filters.repo) return false;
+      // Repo filter (multi-select)
+      if (filters.repos.length > 0 && !filters.repos.includes(pr.repository.name)) return false;
 
       // Pipeline filter
       if (filters.pipeline !== "all") {
@@ -53,15 +76,24 @@ export function filterPRs(prs: PR[], filters: Filters): PR[] {
 }
 
 /**
- * Returns true if the PR is a draft or its title contains WIP/TODO.
+ * Extract all unique repo names from the PR list, sorted alphabetically.
  */
+export function extractRepos(prs: PR[]): string[] {
+  const repos = new Set<string>();
+  for (const pr of prs) {
+    repos.add(pr.repository.name);
+  }
+  return [...repos].sort((a, b) => a.localeCompare(b));
+}
+
+// -----------------------------------------------------------------------------
+// Bucketing / Grouping (unchanged)
+// -----------------------------------------------------------------------------
+
 export function isDraftOrTodo(pr: PR): boolean {
   return pr.isDraft || /\b(WIP|TODO)\b/i.test(pr.title);
 }
 
-/**
- * Bucketize PRs into "now" (unresolved threads), "drafts", and "today" (everything else).
- */
 export function bucketize(prs: PR[]): Buckets {
   const now: PR[] = [];
   const today: PR[] = [];
@@ -80,10 +112,6 @@ export function bucketize(prs: PR[]): Buckets {
   return { now, today, drafts };
 }
 
-/**
- * Group PRs by jiraTicket. "No ticket" is the fallback key.
- * Sorted: tickets first (alphabetically), "No ticket" last.
- */
 export function groupByTicket(prs: PR[]): Map<string, PR[]> {
   const groups = new Map<string, PR[]>();
 
@@ -111,9 +139,6 @@ export function groupByTicket(prs: PR[]): Map<string, PR[]> {
   return sorted;
 }
 
-/**
- * Group PRs by repository name, sorted alphabetically.
- */
 export function groupByRepo(prs: PR[]): Map<string, PR[]> {
   const groups = new Map<string, PR[]>();
 

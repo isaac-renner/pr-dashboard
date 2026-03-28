@@ -6,10 +6,17 @@
  */
 
 import * as Atom from "effect/unstable/reactivity/Atom";
-import { bucketize, filterPRs } from "../lib/filters.js";
+import { bucketize, extractRepos, filterPRs } from "../lib/filters.js";
 import type { Buckets, PR } from "../lib/types.js";
 import { filtersAtom } from "./filters.js";
 import { prsAtom } from "./prs.js";
+
+// --- Available repos (derived from all PRs) ---
+
+export const availableReposAtom: Atom.Atom<string[]> = Atom.make((get) => {
+  const prs = get(prsAtom);
+  return extractRepos(prs);
+});
 
 // --- Filtered PRs ---
 

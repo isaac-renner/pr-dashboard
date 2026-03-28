@@ -51,8 +51,8 @@ export interface PR {
 }
 
 export interface Filters {
-  exclude: string;
-  repo: string;
+  search: string;
+  repos: ReadonlyArray<string>;
   pipeline: "all" | "failing" | "pending" | "passing" | "none";
   drafts: "include" | "exclude";
   group: "ticket" | "repo";

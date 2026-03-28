@@ -3,7 +3,7 @@ import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
-import { draftsAtom, excludeAtom, filtersAtom, groupAtom, pipelineAtom, repoAtom } from "../atoms/filters.js";
+import { draftsAtom, filtersAtom, groupAtom, pipelineAtom, searchAtom, selectedReposAtom } from "../atoms/filters.js";
 import { lastRefreshedAtom, prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { timeAgo } from "../lib/format.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
@@ -19,8 +19,8 @@ export function App() {
   const lastRefreshed = useAtomValue(lastRefreshedAtom);
   const filters = useAtomValue(filtersAtom);
   const setGroup = useAtomSet(groupAtom);
-  const setExclude = useAtomSet(excludeAtom);
-  const setRepo = useAtomSet(repoAtom);
+  const setSearch = useAtomSet(searchAtom);
+  const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setPipeline = useAtomSet(pipelineAtom);
   const setDrafts = useAtomSet(draftsAtom);
 
@@ -52,8 +52,8 @@ export function App() {
       keys: "Shift+f",
       label: "Clear all filters",
       action: () => {
-        setExclude(Option.some(""));
-        setRepo(Option.some(""));
+        setSearch(Option.some(""));
+        setSelectedRepos([]);
         setPipeline(Option.some("all"));
         setDrafts(Option.some("exclude"));
       },
@@ -62,7 +62,7 @@ export function App() {
     // Help
     { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
     { keys: "Escape", label: "Close overlay", action: () => setHelpOpen(false), enableInInputs: true },
-  ], [scrollTo, setGroup, setExclude, setRepo, setPipeline, setDrafts]);
+  ], [scrollTo, setGroup, setSearch, setSelectedRepos, setPipeline, setDrafts]);
 
   const pending = useShortcuts(shortcuts);
 
