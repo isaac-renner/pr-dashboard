@@ -1,9 +1,9 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
-import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
+import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { selectedIndexAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
@@ -24,6 +24,14 @@ export function App() {
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
+  const setSelectedReviews = useAtomSet(selectedReviewsAtom);
+
+  // Clamp selection when display order changes (filter/group change)
+  useEffect(() => {
+    if (selectedIndex >= displayOrder.length) {
+      setSelectedIndex(Math.max(displayOrder.length - 1, -1));
+    }
+  }, [displayOrder.length, selectedIndex, setSelectedIndex]);
 
   const [helpOpen, setHelpOpen] = useState(false);
   const filterInputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +58,16 @@ export function App() {
         }
       },
     },
+    {
+      keys: "p",
+      label: "Open pipeline",
+      action: () => {
+        if (selectedIndex >= 0 && selectedIndex < displayOrder.length) {
+          const pipelineUrl = displayOrder[selectedIndex]!.pipelineUrl;
+          if (pipelineUrl) window.open(pipelineUrl, "_blank");
+        }
+      },
+    },
 
     // Grouping
     { keys: "g r", label: "Group by repo", action: () => setGroup(Option.some("repo")) },
@@ -66,6 +84,7 @@ export function App() {
         setSearch(Option.some(""));
         setSelectedRepos([]);
         setSelectedPipelines([]);
+        setSelectedReviews([]);
       },
     },
 
@@ -81,7 +100,7 @@ export function App() {
         setSelectedIndex(-1);
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedIndex, displayOrder, selectedIndex]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedIndex, displayOrder, selectedIndex]);
 
   const pending = useShortcuts(shortcuts);
 

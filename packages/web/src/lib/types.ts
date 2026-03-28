@@ -51,9 +51,23 @@ export interface PR {
   sessions: SessionRef[];
 }
 
+export type ReviewLabel = "Draft" | "Unreviewed" | "Changes Requested" | "Approved" | "Commented";
+
+export function getReviewLabel(pr: PR): ReviewLabel {
+  if (pr.isDraft && pr.reviewState === "PENDING") return "Draft";
+  if (pr.reviewState === "APPROVED") return "Approved";
+  if (pr.reviewState === "CHANGES_REQUESTED") return "Changes Requested";
+  // Has unresolved threads but no formal review = commented
+  if (pr.unresolvedCount > 0 && pr.reviewState === "PENDING") return "Commented";
+  return "Unreviewed";
+}
+
+export const REVIEW_OPTIONS = ["Draft", "Unreviewed", "Changes Requested", "Approved", "Commented"] as const;
+
 export interface Filters {
   search: string;
   repos: ReadonlyArray<string>;
   pipelines: ReadonlyArray<string>;
+  reviews: ReadonlyArray<string>;
   group: "ticket" | "repo" | "stack";
 }

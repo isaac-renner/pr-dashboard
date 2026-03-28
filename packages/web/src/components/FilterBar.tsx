@@ -2,7 +2,8 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import React from "react";
 import { availableReposAtom } from "../atoms/derived.js";
-import { searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
+import { searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom } from "../atoms/filters.js";
+import { REVIEW_OPTIONS } from "../lib/types.js";
 import { ChipFilterPopover } from "./ChipFilterPopover.js";
 
 const PIPELINE_OPTIONS = ["Passing", "Failing", "Pending", "None"];
@@ -16,10 +17,12 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
   const search = useAtomValue(searchAtom);
   const selectedRepos = useAtomValue(selectedReposAtom);
   const selectedPipelines = useAtomValue(selectedPipelinesAtom);
+  const selectedReviews = useAtomValue(selectedReviewsAtom);
   const availableRepos = useAtomValue(availableReposAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
+  const setSelectedReviews = useAtomSet(selectedReviewsAtom);
 
   const searchVal = search._tag === "Some" ? search.value : "";
 
@@ -39,11 +42,11 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
     set((current) => current.filter((v) => v !== value));
   }
 
-  const hasActive = selectedRepos.length > 0 || selectedPipelines.length > 0;
+  const hasActive = selectedRepos.length > 0 || selectedPipelines.length > 0 || selectedReviews.length > 0;
 
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "1ch", alignItems: "end" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "1ch", alignItems: "end" }}>
         <input
           ref={filterInputRef}
           type="text"
@@ -60,6 +63,14 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
           onToggle={(v) => toggleItem(setSelectedRepos, v)}
           onClear={() => setSelectedRepos([])}
           triggerRef={repoFilterRef}
+        />
+
+        <ChipFilterPopover
+          label="Review"
+          options={[...REVIEW_OPTIONS]}
+          selected={[...selectedReviews]}
+          onToggle={(v) => toggleItem(setSelectedReviews, v)}
+          onClear={() => setSelectedReviews([])}
         />
 
         <ChipFilterPopover
@@ -81,6 +92,16 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
               type="button"
             >
               {repo} ×
+            </button>
+          ))}
+          {selectedReviews.map((r) => (
+            <button
+              key={`review:${r}`}
+              className="chip"
+              onClick={() => removeItem(setSelectedReviews, r)}
+              type="button"
+            >
+              {r} ×
             </button>
           ))}
           {selectedPipelines.map((p) => (

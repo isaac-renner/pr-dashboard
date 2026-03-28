@@ -2,7 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import React, { useEffect, useRef, useState } from "react";
 import { selectedIndexAtom } from "../atoms/selection.js";
 import { timeAgo, truncate } from "../lib/format.js";
-import type { PR } from "../lib/types.js";
+import { getReviewLabel, type PR } from "../lib/types.js";
 
 interface PRRowProps {
   pr: PR;
@@ -46,10 +46,7 @@ export function PRRow({ pr, index }: PRRowProps) {
     : pr.pipelineState === "PENDING" ? "Pending"
     : "--";
 
-  const reviewLabel = pr.isDraft && pr.reviewState === "PENDING" ? "Draft"
-    : pr.reviewState === "CHANGES_REQUESTED" ? "Changes"
-    : pr.reviewState === "APPROVED" ? "Approved"
-    : "Pending";
+  const reviewLabel = getReviewLabel(pr);
 
   const mergeLabel = pr.mergeable === "CONFLICTING" ? "Conflict"
     : pr.mergeable === "MERGEABLE" ? "Clear"

@@ -1,4 +1,4 @@
-import type { Filters, PR } from "./types.js";
+import { getReviewLabel, type Filters, type PR } from "./types.js";
 
 // -----------------------------------------------------------------------------
 // Fuzzy match — checks if all characters in query appear in order in target
@@ -55,6 +55,9 @@ export function filterPRs(prs: PR[], filters: Filters): PR[] {
           : "None";
         if (!filters.pipelines.includes(prPipeline)) return false;
       }
+
+      // Review filter (multi-select)
+      if (filters.reviews.length > 0 && !filters.reviews.includes(getReviewLabel(pr))) return false;
 
       return true;
     })
