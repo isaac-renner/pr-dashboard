@@ -43,7 +43,15 @@ export function App() {
       },
     },
     { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
-    { keys: "Escape", label: "Close overlay", action: () => setHelpOpen(false), enableInInputs: true },
+    {
+      keys: "Escape",
+      label: "Close / deselect",
+      enableInInputs: true,
+      action: () => {
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        setHelpOpen(false);
+      },
+    },
   ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines]);
 
   const pending = useShortcuts(shortcuts);
