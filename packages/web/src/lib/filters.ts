@@ -18,13 +18,15 @@ export function fuzzyMatch(query: string, target: string): boolean {
  * Build a searchable string from a PR for fuzzy matching.
  */
 function searchableText(pr: PR): string {
+  const pipelineLabel = pr.pipelineState === "SUCCESS" ? "Passing"
+    : pr.pipelineState === "FAILURE" ? "Failing"
+    : pr.pipelineState === "PENDING" ? "Pending"
+    : "";
   return [
-    `#${pr.number}`,
     pr.title,
-    pr.repository.name,
-    pr.repository.nameWithOwner,
     pr.headRefName,
-    pr.jiraTicket ?? "",
+    getReviewLabel(pr),
+    pipelineLabel,
   ].join(" ");
 }
 
