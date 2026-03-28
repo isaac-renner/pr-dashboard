@@ -519,6 +519,7 @@ details[open] > summary::before {
   top: calc(var(--line-height) / 2);
   max-height: calc(100vh - var(--line-height) * 3);
   margin-top: 0;
+  margin-left: calc(var(--border) * -1);
 }
 
 .sidebar-content {
