@@ -442,7 +442,7 @@ details[open] > summary::before {
 /* ── PR Grid ── */
 
 .pr-columns {
-  --col: 3fr 1fr 1fr 1fr 1fr;
+  --col: 3fr 1fr 1fr 1fr;
   overflow: hidden;
 }
 

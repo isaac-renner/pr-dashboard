@@ -35,8 +35,6 @@ export function PRRow({ pr }: PRRowProps) {
     : pr.mergeable === "MERGEABLE" ? "Clear"
     : "Unknown";
 
-  const commentCount = pr.unresolvedThreads.length;
-
   return (
     <div ref={rowRef} className={`pr-row${isSelected ? " selected" : ""}`} onClick={() => setSelectedUrl(pr.url)}>
       <div>
@@ -57,8 +55,6 @@ export function PRRow({ pr }: PRRowProps) {
       </div>
 
       <div>{mergeLabel}</div>
-
-      <div>{commentCount > 0 ? commentCount : <span className="muted">--</span>}</div>
     </div>
   );
 }
