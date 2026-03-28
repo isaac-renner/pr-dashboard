@@ -12,9 +12,10 @@ interface FilterBarProps {
   readonly filterInputRef?: React.RefObject<HTMLInputElement | null>;
   readonly repoFilterRef?: React.RefObject<HTMLButtonElement | null>;
   readonly reviewFilterRef?: React.RefObject<HTMLButtonElement | null>;
+  readonly pipelineFilterRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
-export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef }: FilterBarProps) {
+export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipelineFilterRef }: FilterBarProps) {
   const search = useAtomValue(searchAtom);
   const selectedRepos = useAtomValue(selectedReposAtom);
   const selectedPipelines = useAtomValue(selectedPipelinesAtom);
@@ -81,6 +82,7 @@ export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef }: Fi
           selected={[...selectedPipelines]}
           onToggle={(v) => toggleItem(setSelectedPipelines, v)}
           onClear={() => setSelectedPipelines([])}
+          triggerRef={pipelineFilterRef}
         />
       </div>
 

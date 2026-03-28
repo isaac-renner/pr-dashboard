@@ -12,6 +12,7 @@ import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
 import { PRList } from "./PRList.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
+import { ActionsModal } from "./ActionsModal.js";
 import { Sidebar } from "./Sidebar.js";
 
 export function App() {
@@ -51,9 +52,11 @@ export function App() {
   const selectedPR = selectedIndex >= 0 ? displayOrder[selectedIndex] ?? null : null;
 
   const [helpOpen, setHelpOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const filterInputRef = useRef<HTMLInputElement>(null);
   const repoFilterRef = useRef<HTMLButtonElement>(null);
   const reviewFilterRef = useRef<HTMLButtonElement>(null);
+  const pipelineFilterRef = useRef<HTMLButtonElement>(null);
 
   function moveSelection(delta: number) {
     if (displayOrder.length === 0) return;
@@ -73,6 +76,7 @@ export function App() {
     { keys: "k", label: "Move up / focus search", action: () => moveSelection(-1), group: "Navigation" },
     { keys: "o", label: "Open PR", action: () => { if (selectedPR) window.open(selectedPR.url, "_blank"); }, group: "Navigation" },
     { keys: "p", label: "Open pipeline", action: () => { if (selectedPR?.pipelineUrl) window.open(selectedPR.pipelineUrl, "_blank"); }, group: "Navigation" },
+    { keys: "a", label: "Actions", action: () => { if (selectedPR) setActionsOpen(true); }, group: "Navigation" },
 
     { keys: "g r", label: "Repo", action: () => setGroup(Option.some("repo")), group: "Group by" },
     { keys: "g k", label: "Ticket", action: () => setGroup(Option.some("ticket")), group: "Group by" },
@@ -85,12 +89,13 @@ export function App() {
     { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
     { keys: "f v", label: "Review filter", action: () => reviewFilterRef.current?.click(), group: "Filters" },
+    { keys: "f p", label: "Pipeline filter", action: () => pipelineFilterRef.current?.click(), group: "Filters" },
     { keys: "c f", label: "Clear all filters", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
 
     { keys: "i", label: "Toggle sidebar", action: () => setSidebarOpen((o) => !o), group: "Navigation" },
 
     { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
-    { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setSidebarOpen(false); setSelectedUrl(null); }, group: "General" },
+    { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setActionsOpen(false); setSidebarOpen(false); setSelectedUrl(null); }, group: "General" },
   ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedUrl, setSidebarOpen, displayOrder, selectedIndex, selectedPR]);
 
   const pending = useShortcuts(shortcuts);
@@ -100,7 +105,7 @@ export function App() {
 
   return (
     <>
-      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} reviewFilterRef={reviewFilterRef} />
+      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} reviewFilterRef={reviewFilterRef} pipelineFilterRef={pipelineFilterRef} />
 
       {loading && !prs.length && (
         <div className="flex"><div className="spinner" /> Loading...</div>
@@ -119,6 +124,7 @@ export function App() {
       <Sidebar />
       <FloatingBar pending={pending} shortcuts={shortcuts} selectedIndex={selectedIndex} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
+      <ActionsModal pr={selectedPR} open={actionsOpen} onClose={() => setActionsOpen(false)} />
     </>
   );
 }
