@@ -15,6 +15,7 @@
   --bg: #ffffff;
   --text: #000000;
   --border-color: #000000;
+  --hover: #f0f0f0;
   --selection-bg: #000000;
   --selection-text: #ffffff;
 }
@@ -24,6 +25,7 @@
     --bg: #000000;
     --text: #ffffff;
     --border-color: #ffffff;
+    --hover: #1a1a1a;
     --selection-bg: #ffffff;
     --selection-text: #000000;
   }
@@ -119,8 +121,8 @@ input, select, button, textarea {
 }
 
 input:focus, select:focus, button:focus, textarea:focus {
-  outline: var(--border) solid var(--border-color);
-  outline-offset: var(--border);
+  --border: 3px;
+  outline: none;
 }
 
 button {
@@ -433,6 +435,19 @@ details[open] > summary::before {
 
 .pr-row:last-child {
   border-bottom: none;
+}
+
+.pr-row:hover {
+  background: var(--hover);
+}
+
+.pr-row.selected {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.pr-row.selected a {
+  color: var(--selection-text);
 }
 
 /* Keep branch/meta on same line as title without extra vertical gap */
