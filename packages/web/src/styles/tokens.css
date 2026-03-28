@@ -52,7 +52,7 @@ body {
   color: var(--text);
   padding: calc(var(--line-height) * 2) 2ch;
   min-height: 100vh;
-  max-width: min(120ch, round(down, 100%, 1ch));
+  width: round(down, 100%, 1ch);
   font-variant-numeric: tabular-nums lining-nums;
 }
 
@@ -401,27 +401,33 @@ details[open] > summary::before {
 
 .gap-0 > * + * { margin-top: 0; }
 
-/* ── PR Grid (CSS Grid for responsive collapsing) ── */
+/* ── PR Grid ── */
+/* Each row is its own grid so columns align even across <details> boundaries. */
 
-.pr-grid {
+.pr-columns {
+  --col: 3fr 1fr 1fr 1fr 1fr;
+}
+
+.pr-grid-header,
+.pr-row {
   display: grid;
-  grid-template-columns: 3fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: var(--col);
   gap: 0 1ch;
   align-items: baseline;
+  padding: calc(var(--line-height) / 2) 1ch;
 }
 
 .pr-grid-header {
   font-weight: 600;
   border-bottom: var(--border) solid var(--border-color);
-  padding: calc(var(--line-height) / 2) 1ch;
 }
 
-.pr-grid-header > * + * {
+.pr-grid-header > *,
+.pr-row > * {
   margin-top: 0;
 }
 
 .pr-row {
-  padding: calc(var(--line-height) / 2) 1ch;
   border-bottom: 1px dotted var(--border-color);
 }
 
@@ -429,22 +435,17 @@ details[open] > summary::before {
   border-bottom: none;
 }
 
-.pr-row > * {
-  margin-top: 0;
-}
-
-.pr-row > *:first-child > * + * {
+/* Keep branch/meta on same line as title without extra vertical gap */
+.pr-row > *:first-child > * {
   margin-top: 0;
 }
 
 @media (max-width: 720px) {
-  .pr-grid {
-    grid-template-columns: 1fr;
-  }
   .pr-grid-header {
     display: none;
   }
   .pr-row {
+    grid-template-columns: 1fr;
     border: var(--border) solid var(--border-color);
     margin-bottom: var(--line-height);
   }

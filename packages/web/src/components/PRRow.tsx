@@ -41,7 +41,7 @@ export function PRRow({ pr }: PRRowProps) {
     : "Unknown";
 
   return (
-    <div className="pr-grid pr-row">
+    <div className="pr-row">
       {/* PR title + meta */}
       <div>
         <a href={pr.url} target="_blank" rel="noreferrer">

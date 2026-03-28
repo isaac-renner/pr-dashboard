@@ -39,9 +39,7 @@ function GroupSection({
           {latest && ` · latest ${timeAgo(latest.updatedAt)}`}
         </span>
       </summary>
-      <div className="pr-grid">
-        {sorted.map((pr) => <PRRow key={pr.url} pr={pr} />)}
-      </div>
+      {sorted.map((pr) => <PRRow key={pr.url} pr={pr} />)}
     </details>
   );
 }
@@ -61,8 +59,8 @@ export function PRList() {
   }
 
   return (
-    <div className="panel">
-      <div className="pr-grid pr-grid-header">
+    <div className="panel pr-columns">
+      <div className="pr-grid-header">
         <div>PR</div>
         <div>Review</div>
         <div>Pipeline</div>
