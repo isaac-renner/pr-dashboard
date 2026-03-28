@@ -1,0 +1,13 @@
+{
+  "name": "@pr-dashboard/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./rpc": "./src/rpc/index.ts"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.0"
+  }
+}

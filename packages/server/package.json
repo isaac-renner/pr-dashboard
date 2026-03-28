@@ -1,0 +1,12 @@
+{
+  "name": "@pr-dashboard/server",
+  "version": "0.0.1",
+  "type": "module",
+  "dependencies": {
+    "@pr-dashboard/shared": "workspace:*",
+    "@pr-dashboard/github-app": "workspace:*"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.0"
+  }
+}
