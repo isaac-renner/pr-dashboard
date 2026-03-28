@@ -76,7 +76,7 @@ export function App() {
     { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
     { keys: "f v", label: "Review filter", action: () => reviewFilterRef.current?.click(), group: "Filters" },
-    { keys: "Shift+f", label: "Clear all", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
+    { keys: "c f", label: "Clear all filters", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
 
     { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
     { keys: "Escape", label: "Close / deselect", enableInInputs: true, action: () => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); setHelpOpen(false); setSelectedUrl(null); }, group: "General" },

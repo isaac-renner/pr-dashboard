@@ -24,9 +24,16 @@ export function ChipFilterPopover({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = query
+  const matched = query
     ? options.filter((o) => fuzzyMatch(query, o))
     : options;
+
+  // Selected items first, then unselected
+  const filtered = [...matched].sort((a, b) => {
+    const aSelected = selected.includes(a) ? 0 : 1;
+    const bSelected = selected.includes(b) ? 0 : 1;
+    return aSelected - bSelected;
+  });
 
   // Reset focus index when filtered list changes
   useEffect(() => {
