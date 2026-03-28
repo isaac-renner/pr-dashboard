@@ -2,24 +2,23 @@ import { useAtomValue } from "@effect/atom-react";
 import React from "react";
 import { displayOrderAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
-import { selectedIndexAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 
 interface FloatingBarProps {
   readonly pending: string | null;
   readonly shortcuts: ReadonlyArray<ShortcutDef>;
+  readonly selectedIndex: number;
 }
 
-export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
+export function FloatingBar({ pending, shortcuts, selectedIndex }: FloatingBarProps) {
   const filters = useAtomValue(filtersAtom);
-  const selectedIndex = useAtomValue(selectedIndexAtom);
   const displayOrder = useAtomValue(displayOrderAtom);
 
   const groupLabel = filters.group === "stack" ? "STACK"
     : filters.group === "repo" ? "REPO"
+    : filters.group === "none" ? "ALL"
     : "TICKET";
 
-  // Chord mode: show completions
   if (pending) {
     const completions = shortcuts.filter((s) => {
       const parts = s.keys.split(" ");
@@ -34,7 +33,7 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
             const secondKey = s.keys.split(" ")[1]!;
             return (
               <span key={s.keys}>
-                <kbd>{secondKey}</kbd> <span className="muted">{s.label.replace(/^.*?by |^.*?to |^Open |^Focus |^Clear |^Toggle |^Close |^Move |^Group /, "")}</span>
+                <kbd>{secondKey}</kbd> <span className="muted">{s.label.replace(/^.*?by |^.*?to |^Open |^Focus |^Clear |^Toggle |^Close |^Move |^Group |^No /, "")}</span>
               </span>
             );
           })}
@@ -44,7 +43,6 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
     );
   }
 
-  // Default: show common shortcuts + mode
   const position = selectedIndex >= 0
     ? `${selectedIndex + 1}/${displayOrder.length}`
     : `${displayOrder.length} PRs`;
@@ -54,6 +52,7 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
       <div className="flex muted" style={{ flex: 1 }}>
         <span><kbd>j</kbd><kbd>k</kbd> nav</span>
         <span><kbd>o</kbd> open</span>
+        <span><kbd>p</kbd> pipeline</span>
         <span><kbd>/</kbd> search</span>
         <span><kbd>?</kbd> help</span>
       </div>

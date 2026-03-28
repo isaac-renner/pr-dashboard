@@ -1,8 +1,8 @@
 /**
- * Row selection atom — tracks which PR row is focused via j/k navigation.
- * -1 means no selection.
+ * Row selection — tracks which PR is selected via j/k navigation.
+ * null means no selection. Stores the PR url for stable identity.
  */
 
 import * as Atom from "effect/unstable/reactivity/Atom";
 
-export const selectedIndexAtom: Atom.Writable<number> = Atom.make(-1);
+export const selectedUrlAtom: Atom.Writable<string | null> = Atom.make(null as string | null);

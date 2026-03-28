@@ -361,16 +361,24 @@ details:last-child {
   border-bottom: none;
 }
 
-details > .pr-row {
+details > .pr-row,
+details > summary {
+  margin-top: 0;
+}
+
+.group-fold {
+  padding: calc(var(--line-height) / 2) 1ch;
   margin-top: 0;
 }
 
 summary {
   cursor: pointer;
   user-select: none;
-  padding: calc(var(--line-height) / 2) 0;
+  padding: 0;
+  line-height: var(--line-height);
   font-weight: 600;
   list-style: none;
+  margin-top: 0;
 }
 
 summary::before {
@@ -387,11 +395,10 @@ details[open] > summary::before {
 
 .spinner {
   display: inline-block;
-  width: 2ch;
+  width: var(--line-height);
   height: var(--line-height);
   border: var(--border) solid var(--border-color);
   border-top-color: transparent;
-  border-radius: 50% !important;
   animation: spin 0.8s linear infinite;
   vertical-align: middle;
 }

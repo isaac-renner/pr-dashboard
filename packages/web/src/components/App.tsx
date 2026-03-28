@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
-import { selectedIndexAtom } from "../atoms/selection.js";
+import { selectedUrlAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
 import { FilterBar } from "./FilterBar.js";
@@ -18,63 +18,71 @@ export function App() {
   const prs = useAtomValue(prsAtom);
   const filtered = useAtomValue(filteredPrsAtom);
   const displayOrder = useAtomValue(displayOrderAtom);
-  const selectedIndex = useAtomValue(selectedIndexAtom);
-  const setSelectedIndex = useAtomSet(selectedIndexAtom);
+  const selectedUrl = useAtomValue(selectedUrlAtom);
+  const setSelectedUrl = useAtomSet(selectedUrlAtom);
   const setGroup = useAtomSet(groupAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
   const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
   const setSelectedReviews = useAtomSet(selectedReviewsAtom);
 
-  // Clamp selection when display order changes (filter/group change)
+  // Current index of selected URL in display order
+  const selectedIndex = useMemo(() => {
+    if (!selectedUrl) return -1;
+    return displayOrder.findIndex((pr) => pr.url === selectedUrl);
+  }, [selectedUrl, displayOrder]);
+
+  // If selected PR disappears from filtered list, clear selection
   useEffect(() => {
-    if (selectedIndex >= displayOrder.length) {
-      setSelectedIndex(Math.max(displayOrder.length - 1, -1));
+    if (selectedUrl && selectedIndex === -1) {
+      setSelectedUrl(null);
     }
-  }, [displayOrder.length, selectedIndex, setSelectedIndex]);
+  }, [selectedUrl, selectedIndex, setSelectedUrl]);
+
+  const selectedPR = selectedIndex >= 0 ? displayOrder[selectedIndex] ?? null : null;
 
   const [helpOpen, setHelpOpen] = useState(false);
   const filterInputRef = useRef<HTMLInputElement>(null);
   const repoFilterRef = useRef<HTMLButtonElement>(null);
 
+  function moveSelection(delta: number) {
+    if (displayOrder.length === 0) return;
+    const next = selectedIndex === -1
+      ? (delta > 0 ? 0 : displayOrder.length - 1)
+      : Math.max(0, Math.min(selectedIndex + delta, displayOrder.length - 1));
+    setSelectedUrl(displayOrder[next]!.url);
+  }
+
   const shortcuts: ReadonlyArray<ShortcutDef> = useMemo(() => [
-    // Navigation
-    {
-      keys: "j",
-      label: "Move down",
-      action: () => setSelectedIndex((i) => Math.min(i + 1, displayOrder.length - 1)),
-    },
-    {
-      keys: "k",
-      label: "Move up",
-      action: () => setSelectedIndex((i) => Math.max(i - 1, 0)),
-    },
+    { keys: "j", label: "Move down", action: () => moveSelection(1) },
+    { keys: "k", label: "Move up", action: () => moveSelection(-1) },
     {
       keys: "o",
       label: "Open PR",
-      action: () => {
-        if (selectedIndex >= 0 && selectedIndex < displayOrder.length) {
-          window.open(displayOrder[selectedIndex]!.url, "_blank");
-        }
-      },
+      action: () => { if (selectedPR) window.open(selectedPR.url, "_blank"); },
     },
     {
       keys: "p",
       label: "Open pipeline",
-      action: () => {
-        if (selectedIndex >= 0 && selectedIndex < displayOrder.length) {
-          const pipelineUrl = displayOrder[selectedIndex]!.pipelineUrl;
-          if (pipelineUrl) window.open(pipelineUrl, "_blank");
-        }
-      },
+      action: () => { if (selectedPR?.pipelineUrl) window.open(selectedPR.pipelineUrl, "_blank"); },
     },
 
-    // Grouping
     { keys: "g r", label: "Group by repo", action: () => setGroup(Option.some("repo")) },
     { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
     { keys: "g s", label: "Group by stack", action: () => setGroup(Option.some("stack")) },
+    { keys: "g n", label: "No grouping", action: () => setGroup(Option.some("none")) },
 
-    // Filters
+    {
+      keys: "z o",
+      label: "Open all folds",
+      action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = true),
+    },
+    {
+      keys: "z c",
+      label: "Close all folds",
+      action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = false),
+    },
+
     { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },
     { keys: "f r", label: "Open repo filter", action: () => repoFilterRef.current?.click() },
     {
@@ -88,7 +96,6 @@ export function App() {
       },
     },
 
-    // Help
     { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
     {
       keys: "Escape",
@@ -97,10 +104,10 @@ export function App() {
       action: () => {
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
         setHelpOpen(false);
-        setSelectedIndex(-1);
+        setSelectedUrl(null);
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedIndex, displayOrder, selectedIndex]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedUrl, displayOrder, selectedIndex, selectedPR]);
 
   const pending = useShortcuts(shortcuts);
 
@@ -112,7 +119,7 @@ export function App() {
       <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} />
 
       {loading && !prs.length && (
-        <div><span className="spinner" /> Loading...</div>
+        <div className="flex"><div className="spinner" /> Loading...</div>
       )}
       {error && <div>Error: {error}</div>}
       {prs.length > 0 && (
@@ -125,7 +132,7 @@ export function App() {
       )}
       {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
 
-      <FloatingBar pending={pending} shortcuts={shortcuts} />
+      <FloatingBar pending={pending} shortcuts={shortcuts} selectedIndex={selectedIndex} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
     </>
   );

@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
-import React, { useMemo } from "react";
-import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
+import React from "react";
+import { filteredPrsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
 import { groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
 import { timeAgo } from "../lib/format.js";
@@ -13,12 +13,10 @@ function GroupSection({
   name,
   prs,
   isTicketGroup,
-  indexMap,
 }: {
   name: string;
   prs: PR[];
   isTicketGroup: boolean;
-  indexMap: Map<string, number>;
 }) {
   const sorted = [...prs].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -31,7 +29,7 @@ function GroupSection({
     : name;
 
   return (
-    <details open>
+    <details open className="group-fold">
       <summary>
         <strong>{titleContent}</strong>
         {" "}
@@ -40,7 +38,7 @@ function GroupSection({
           {latest && ` · latest ${timeAgo(latest.updatedAt)}`}
         </span>
       </summary>
-      {sorted.map((pr) => <PRRow key={pr.url} pr={pr} index={indexMap.get(pr.url) ?? -1} />)}
+      {sorted.map((pr) => <PRRow key={pr.url} pr={pr} />)}
     </details>
   );
 }
@@ -49,24 +47,34 @@ export function PRList() {
   const filtered = useAtomValue(filteredPrsAtom);
   const filters = useAtomValue(filtersAtom);
 
+  if (filtered.length === 0) {
+    return <div className="muted">No PRs match filters</div>;
+  }
+
+  // No grouping mode — just flat list sorted by updatedAt
+  if (filters.group === "none") {
+    const sorted = [...filtered].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+    return (
+      <div className="panel pr-columns">
+        <div className="pr-grid-header">
+          <div>PR</div>
+          <div>Review</div>
+          <div>Pipeline</div>
+          <div>Conflicts</div>
+          <div>Comments</div>
+        </div>
+        {sorted.map((pr) => <PRRow key={pr.url} pr={pr} />)}
+      </div>
+    );
+  }
+
   const grouped = filters.group === "stack"
     ? groupByStack(filtered)
     : filters.group === "ticket"
     ? groupByTicket(filtered)
     : groupByRepo(filtered);
-
-  const displayOrder = useAtomValue(displayOrderAtom);
-
-  // Build a flat index map: PR url → index in display order
-  const indexMap = useMemo(() => {
-    const map = new Map<string, number>();
-    displayOrder.forEach((pr, i) => map.set(pr.url, i));
-    return map;
-  }, [displayOrder]);
-
-  if (filtered.length === 0) {
-    return <div className="muted">No PRs match filters</div>;
-  }
 
   return (
     <div className="panel pr-columns">
@@ -83,7 +91,6 @@ export function PRList() {
           name={groupName}
           prs={groupPrs}
           isTicketGroup={filters.group === "ticket"}
-          indexMap={indexMap}
         />
       ))}
     </div>

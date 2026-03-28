@@ -1,23 +1,21 @@
 import { useAtomValue } from "@effect/atom-react";
 import React, { useEffect, useRef, useState } from "react";
-import { selectedIndexAtom } from "../atoms/selection.js";
+import { selectedUrlAtom } from "../atoms/selection.js";
 import { timeAgo, truncate } from "../lib/format.js";
 import { getReviewLabel, type PR } from "../lib/types.js";
 
 interface PRRowProps {
   pr: PR;
-  index: number;
 }
 
-export function PRRow({ pr, index }: PRRowProps) {
-  const selectedIndex = useAtomValue(selectedIndexAtom);
-  const isSelected = index === selectedIndex;
+export function PRRow({ pr }: PRRowProps) {
+  const selectedUrl = useAtomValue(selectedUrlAtom);
+  const isSelected = pr.url === selectedUrl;
   const rowRef = useRef<HTMLDivElement>(null);
 
   const [commentsOpen, setCommentsOpen] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
 
-  // Scroll selected row into view
   useEffect(() => {
     if (isSelected && rowRef.current) {
       rowRef.current.scrollIntoView({ block: "nearest" });
@@ -41,12 +39,12 @@ export function PRRow({ pr, index }: PRRowProps) {
     };
   }, []);
 
+  const reviewLabel = getReviewLabel(pr);
+
   const pipelineLabel = pr.pipelineState === "FAILURE" ? "Failing"
     : pr.pipelineState === "SUCCESS" ? "Passing"
     : pr.pipelineState === "PENDING" ? "Pending"
     : "--";
-
-  const reviewLabel = getReviewLabel(pr);
 
   const mergeLabel = pr.mergeable === "CONFLICTING" ? "Conflict"
     : pr.mergeable === "MERGEABLE" ? "Clear"

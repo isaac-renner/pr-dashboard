@@ -33,6 +33,12 @@ export const displayOrderAtom: Atom.Atom<PR[]> = Atom.make((get) => {
   const filtered = get(filteredPrsAtom);
   const filters = get(filtersAtom);
 
+  if (filters.group === "none") {
+    return [...filtered].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }
+
   const grouped = filters.group === "stack"
     ? groupByStack(filtered)
     : filters.group === "ticket"

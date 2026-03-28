@@ -69,5 +69,5 @@ export interface Filters {
   repos: ReadonlyArray<string>;
   pipelines: ReadonlyArray<string>;
   reviews: ReadonlyArray<string>;
-  group: "ticket" | "repo" | "stack";
+  group: "ticket" | "repo" | "stack" | "none";
 }
