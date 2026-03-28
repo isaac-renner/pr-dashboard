@@ -29,6 +29,7 @@ export function App() {
     // Grouping
     { keys: "g r", label: "Group by repo", action: () => setGroup(Option.some("repo")) },
     { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
+    { keys: "g s", label: "Group by stack", action: () => setGroup(Option.some("stack")) },
 
     // Actions
     { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },

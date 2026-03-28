@@ -26,7 +26,7 @@ export type DraftFilter = typeof DraftFilter.Type;
 // Group mode
 // -----------------------------------------------------------------------------
 
-export const GroupMode = Schema.Literals(["ticket", "repo"] as const);
+export const GroupMode = Schema.Literals(["ticket", "repo", "stack"] as const);
 export type GroupMode = typeof GroupMode.Type;
 
 // -----------------------------------------------------------------------------

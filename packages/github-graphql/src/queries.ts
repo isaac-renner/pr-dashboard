@@ -10,6 +10,7 @@ export const PRFields = graphql(`
     createdAt
     updatedAt
     headRefName
+    baseRefName
     mergeable
     repository {
       name

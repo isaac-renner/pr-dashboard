@@ -84,7 +84,7 @@ export function extractRepos(prs: PR[]): string[] {
 }
 
 // -----------------------------------------------------------------------------
-// Bucketing / Grouping (unchanged)
+// Grouping
 // -----------------------------------------------------------------------------
 
 export function groupByTicket(prs: PR[]): Map<string, PR[]> {
@@ -135,4 +135,73 @@ export function groupByRepo(prs: PR[]): Map<string, PR[]> {
   }
 
   return sorted;
+}
+
+/**
+ * Group PRs by stack.
+ *
+ * Within each repo, if PR B's baseRefName matches PR A's headRefName,
+ * they're in the same stack. Walk the chain to find the root (the PR
+ * whose base isn't another PR's head — typically main/master).
+ *
+ * Stacks are ordered root-first. Multi-PR stacks sort before singletons.
+ */
+export function groupByStack(prs: PR[]): Map<string, PR[]> {
+  // Index: within each repo, map headRefName → PR
+  const byRepo = new Map<string, Map<string, PR>>();
+  for (const pr of prs) {
+    const repo = pr.repository.nameWithOwner;
+    let repoMap = byRepo.get(repo);
+    if (!repoMap) {
+      repoMap = new Map();
+      byRepo.set(repo, repoMap);
+    }
+    repoMap.set(pr.headRefName, pr);
+  }
+
+  const visited = new Set<string>();
+  const stacks = new Map<string, PR[]>();
+
+  function findRoot(pr: PR, repoMap: Map<string, PR>, chain: PR[]): PR[] {
+    chain.push(pr);
+    visited.add(pr.url);
+    const parent = repoMap.get(pr.baseRefName);
+    if (parent && !visited.has(parent.url)) {
+      return findRoot(parent, repoMap, chain);
+    }
+    return chain;
+  }
+
+  for (const pr of prs) {
+    if (visited.has(pr.url)) continue;
+
+    const repo = pr.repository.nameWithOwner;
+    const repoMap = byRepo.get(repo)!;
+
+    const chain: PR[] = [];
+    findRoot(pr, repoMap, chain);
+    chain.reverse(); // root first
+
+    const root = chain[0]!;
+    const label = chain.length > 1
+      ? `${root.repository.name}: ${root.headRefName} (${chain.length} stacked)`
+      : `${root.repository.name}: #${root.number} ${root.title}`;
+
+    const existing = stacks.get(label);
+    if (existing) {
+      existing.push(...chain.filter((p) => !existing.includes(p)));
+    } else {
+      stacks.set(label, chain);
+    }
+  }
+
+  // Multi-PR stacks first, then alphabetical
+  const entries = [...stacks.entries()].sort((a, b) => {
+    const aMulti = a[1].length > 1 ? 0 : 1;
+    const bMulti = b[1].length > 1 ? 0 : 1;
+    if (aMulti !== bMulti) return aMulti - bMulti;
+    return a[0].localeCompare(b[0]);
+  });
+
+  return new Map(entries);
 }

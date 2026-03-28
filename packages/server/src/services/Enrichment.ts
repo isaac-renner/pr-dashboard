@@ -60,6 +60,7 @@ export interface GQLNode {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly headRefName: string;
+  readonly baseRefName: string;
   readonly mergeable: string | null;
   readonly repository: { readonly name: string; readonly nameWithOwner: string };
   readonly reviews: {
@@ -273,6 +274,7 @@ export function enrichGraphQLNode(node: GQLNode, currentUser: string): PR {
     createdAt: node.createdAt,
     updatedAt: node.updatedAt,
     headRefName: node.headRefName,
+    baseRefName: node.baseRefName,
     repository: node.repository,
     checks: node.commits.nodes[0]?.commit?.statusCheckRollup?.state ?? null,
     mergeable: node.mergeable,

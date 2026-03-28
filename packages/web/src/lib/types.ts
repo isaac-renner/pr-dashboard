@@ -37,6 +37,7 @@ export interface PR {
   createdAt: string;
   updatedAt: string;
   headRefName: string;
+  baseRefName: string;
   repository: Repository;
   checks: string | null;
   mergeable: string | null;
@@ -54,5 +55,5 @@ export interface Filters {
   search: string;
   repos: ReadonlyArray<string>;
   pipeline: "all" | "failing" | "pending" | "passing" | "none";
-  group: "ticket" | "repo";
+  group: "ticket" | "repo" | "stack";
 }

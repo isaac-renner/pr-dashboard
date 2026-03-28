@@ -53,6 +53,7 @@ export function FilterBar({ filterInputRef }: FilterBarProps) {
           >
             <option value="ticket">Ticket</option>
             <option value="repo">Repo</option>
+            <option value="stack">Stack</option>
           </select>
         </label>
 

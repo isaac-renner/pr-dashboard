@@ -2,7 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import React, { useState } from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
-import { groupByRepo, groupByTicket } from "../lib/filters.js";
+import { groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
 import { timeAgo } from "../lib/format.js";
 import type { PR } from "../lib/types.js";
 import { PRRow } from "./PRRow.js";
@@ -32,10 +32,12 @@ function GroupSection({
   name,
   prs,
   isTicketGroup,
+  isStackGroup,
 }: {
   name: string;
   prs: PR[];
   isTicketGroup: boolean;
+  isStackGroup?: boolean | undefined;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -84,7 +86,9 @@ export function PRList() {
   const filtered = useAtomValue(filteredPrsAtom);
   const filters = useAtomValue(filtersAtom);
 
-  const grouped = filters.group === "ticket"
+  const grouped = filters.group === "stack"
+    ? groupByStack(filtered)
+    : filters.group === "ticket"
     ? groupByTicket(filtered)
     : groupByRepo(filtered);
 
@@ -102,6 +106,7 @@ export function PRList() {
             name={groupName}
             prs={groupPrs}
             isTicketGroup={filters.group === "ticket"}
+            isStackGroup={filters.group === "stack"}
           />
         ))}
       </div>
