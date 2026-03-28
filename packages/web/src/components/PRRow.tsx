@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-react";
+import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import React, { useEffect, useRef, useState } from "react";
 import { selectedUrlAtom } from "../atoms/selection.js";
 import { timeAgo, truncate } from "../lib/format.js";
@@ -10,6 +10,7 @@ interface PRRowProps {
 
 export function PRRow({ pr }: PRRowProps) {
   const selectedUrl = useAtomValue(selectedUrlAtom);
+  const setSelectedUrl = useAtomSet(selectedUrlAtom);
   const isSelected = pr.url === selectedUrl;
   const rowRef = useRef<HTMLDivElement>(null);
 
@@ -18,7 +19,12 @@ export function PRRow({ pr }: PRRowProps) {
 
   useEffect(() => {
     if (isSelected && rowRef.current) {
-      rowRef.current.scrollIntoView({ block: "nearest" });
+      // scrollIntoViewIfNeeded avoids the floating bar overlap
+      if ("scrollIntoViewIfNeeded" in rowRef.current) {
+        (rowRef.current as any).scrollIntoViewIfNeeded(false);
+      } else {
+        rowRef.current.scrollIntoView({ block: "nearest" });
+      }
     }
   }, [isSelected]);
 
@@ -51,7 +57,7 @@ export function PRRow({ pr }: PRRowProps) {
     : "Unknown";
 
   return (
-    <div ref={rowRef} className={`pr-row${isSelected ? " selected" : ""}`}>
+    <div ref={rowRef} className={`pr-row${isSelected ? " selected" : ""}`} onClick={() => setSelectedUrl(pr.url)}>
       <div>
         <a href={pr.url} target="_blank" rel="noreferrer">
           #{pr.number} {pr.title}

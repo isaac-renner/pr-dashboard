@@ -11,9 +11,10 @@ const PIPELINE_OPTIONS = ["Passing", "Failing", "Pending", "None"];
 interface FilterBarProps {
   readonly filterInputRef?: React.RefObject<HTMLInputElement | null>;
   readonly repoFilterRef?: React.RefObject<HTMLButtonElement | null>;
+  readonly reviewFilterRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
-export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
+export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef }: FilterBarProps) {
   const search = useAtomValue(searchAtom);
   const selectedRepos = useAtomValue(selectedReposAtom);
   const selectedPipelines = useAtomValue(selectedPipelinesAtom);
@@ -53,7 +54,7 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
           value={searchVal}
           onChange={(e) => setSearch(Option.some(e.target.value))}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-          placeholder="/ search"
+          placeholder="search"
         />
 
         <ChipFilterPopover
@@ -71,6 +72,7 @@ export function FilterBar({ filterInputRef, repoFilterRef }: FilterBarProps) {
           selected={[...selectedReviews]}
           onToggle={(v) => toggleItem(setSelectedReviews, v)}
           onClear={() => setSelectedReviews([])}
+          triggerRef={reviewFilterRef}
         />
 
         <ChipFilterPopover

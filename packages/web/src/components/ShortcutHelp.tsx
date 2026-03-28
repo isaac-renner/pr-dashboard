@@ -10,7 +10,6 @@ interface ShortcutHelpProps {
 export function ShortcutHelp({ open, onClose, shortcuts }: ShortcutHelpProps) {
   if (!open) return null;
 
-  // Group shortcuts by category
   const groups = new Map<string, ShortcutDef[]>();
   for (const s of shortcuts) {
     const group = s.group ?? "Other";
@@ -26,15 +25,13 @@ export function ShortcutHelp({ open, onClose, shortcuts }: ShortcutHelpProps) {
           <span>Keyboard Shortcuts</span>
           <kbd>Esc</kbd>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 3ch", padding: "var(--line-height) 1ch" }}>
+        <div className="shortcut-grid">
           {Array.from(groups.entries()).map(([groupName, items]) => (
-            <div key={groupName} style={{ marginTop: 0 }}>
-              <div style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "calc(var(--line-height) / 4)" }}>
-                {groupName}
-              </div>
+            <div key={groupName} className="shortcut-group">
+              <div className="shortcut-group-title">{groupName}</div>
               {items.map((s) => (
-                <div key={s.keys} className="flex-between" style={{ padding: "calc(var(--line-height) / 4) 0" }}>
-                  <span>
+                <div key={s.keys} className="shortcut-row">
+                  <span className="shortcut-keys">
                     {formatKeys(s.keys).split(" ").map((k, i) => (
                       <React.Fragment key={i}>
                         {i > 0 && <span className="muted"> </span>}

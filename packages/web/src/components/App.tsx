@@ -44,6 +44,7 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const filterInputRef = useRef<HTMLInputElement>(null);
   const repoFilterRef = useRef<HTMLButtonElement>(null);
+  const reviewFilterRef = useRef<HTMLButtonElement>(null);
 
   function moveSelection(delta: number) {
     if (displayOrder.length === 0) return;
@@ -74,6 +75,7 @@ export function App() {
 
     { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
+    { keys: "f v", label: "Review filter", action: () => reviewFilterRef.current?.click(), group: "Filters" },
     { keys: "Shift+f", label: "Clear all", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); }, group: "Filters" },
 
     { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
@@ -87,7 +89,7 @@ export function App() {
 
   return (
     <>
-      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} />
+      <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} reviewFilterRef={reviewFilterRef} />
 
       {loading && !prs.length && (
         <div className="flex"><div className="spinner" /> Loading...</div>

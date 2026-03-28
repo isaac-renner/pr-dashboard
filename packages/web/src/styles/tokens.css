@@ -53,6 +53,7 @@ body {
   background: var(--bg);
   color: var(--text);
   padding: calc(var(--line-height) / 2) 2ch calc(var(--line-height) * 3) 2ch;
+  scroll-padding-bottom: calc(var(--line-height) * 3);
   min-height: 100vh;
   width: round(down, 100%, 1ch);
   font-variant-numeric: tabular-nums lining-nums;
@@ -460,6 +461,7 @@ details[open] > summary::before {
 
 .pr-row {
   border-bottom: var(--border) dashed var(--border-color);
+  cursor: pointer;
 }
 
 .pr-row:last-child {
@@ -492,6 +494,53 @@ details[open] > summary::before {
     border: var(--border) solid var(--border-color);
     margin-bottom: var(--line-height);
   }
+}
+
+/* ── Shortcut help grid ── */
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0;
+}
+
+.shortcut-grid > * + * {
+  margin-top: 0;
+}
+
+.shortcut-group {
+  padding: var(--line-height) 1ch;
+  border-bottom: 1px dotted var(--border-color);
+}
+
+.shortcut-group:nth-child(odd) {
+  border-right: 1px dotted var(--border-color);
+}
+
+.shortcut-group:nth-last-child(1),
+.shortcut-group:nth-last-child(2) {
+  border-bottom: none;
+}
+
+.shortcut-group-title {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: calc(var(--line-height) / 2);
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(var(--line-height) / 4) 0;
+  margin-top: 0;
+}
+
+.shortcut-keys {
+  display: flex;
+  gap: calc(1ch / 2);
+  align-items: center;
 }
 
 /* ── Responsive ── */
