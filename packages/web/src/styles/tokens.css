@@ -221,6 +221,11 @@ kbd {
   text-decoration: underline;
 }
 
+.chip.focused {
+  outline: var(--border) solid var(--border-color);
+  outline-offset: 1px;
+}
+
 /* ── Popover ── */
 
 .popover-anchor {

@@ -4,8 +4,7 @@ import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useMemo, useRef, useState } from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
-import { lastRefreshedAtom, prsAtom, prsResponseAtom } from "../atoms/prs.js";
-import { timeAgo } from "../lib/format.js";
+import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
 import { FilterBar } from "./FilterBar.js";
@@ -17,7 +16,6 @@ export function App() {
   const response = useAtomValue(prsResponseAtom);
   const prs = useAtomValue(prsAtom);
   const filtered = useAtomValue(filteredPrsAtom);
-  const lastRefreshed = useAtomValue(lastRefreshedAtom);
   const setGroup = useAtomSet(groupAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
@@ -61,17 +59,6 @@ export function App() {
 
   return (
     <>
-      <div className="flex-between">
-        <h1>PR Dashboard</h1>
-        <span className="muted">
-          {loading && !prs.length
-            ? <><span className="spinner" /> Loading...</>
-            : lastRefreshed
-            ? `Updated ${timeAgo(lastRefreshed)}`
-            : null}
-        </span>
-      </div>
-
       <FilterBar filterInputRef={filterInputRef} repoFilterRef={repoFilterRef} />
 
       {loading && !prs.length && (

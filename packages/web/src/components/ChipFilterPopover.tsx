@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { fuzzyMatch } from "../lib/filters.js";
 
 interface ChipFilterPopoverProps {
@@ -20,12 +20,23 @@ export function ChipFilterPopover({
 }: ChipFilterPopoverProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [focusIndex, setFocusIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = query
+    ? options.filter((o) => fuzzyMatch(query, o))
+    : options;
+
+  // Reset focus index when filtered list changes
+  useEffect(() => {
+    setFocusIndex(-1);
+  }, [query]);
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0);
+      setFocusIndex(-1);
     } else {
       setQuery("");
     }
@@ -38,20 +49,31 @@ export function ChipFilterPopover({
         setOpen(false);
       }
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
     document.addEventListener("mousedown", onClick);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onClick);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  const filtered = query
-    ? options.filter((o) => fuzzyMatch(query, o))
-    : options;
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setOpen(false);
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusIndex((i) => (i + 1) % filtered.length);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusIndex((i) => (i - 1 + filtered.length) % filtered.length);
+      return;
+    }
+    if (e.key === "Enter" && focusIndex >= 0 && focusIndex < filtered.length) {
+      e.preventDefault();
+      onToggle(filtered[focusIndex]!);
+      return;
+    }
+  }, [filtered, focusIndex, onToggle]);
 
   const displayLabel = selected.length > 0
     ? `${label} (${selected.length})`
@@ -70,7 +92,7 @@ export function ChipFilterPopover({
       </button>
 
       {open && (
-        <div className="popover">
+        <div className="popover" onKeyDown={handleKeyDown}>
           <input
             ref={inputRef}
             type="text"
@@ -79,10 +101,14 @@ export function ChipFilterPopover({
             placeholder={`filter ${label.toLowerCase()}...`}
           />
           <div className="flex-wrap gap-0">
-            {filtered.map((option) => (
+            {filtered.map((option, i) => (
               <button
                 key={option}
-                className={`chip${selected.includes(option) ? " active" : ""}`}
+                className={[
+                  "chip",
+                  selected.includes(option) ? "active" : "",
+                  i === focusIndex ? "focused" : "",
+                ].filter(Boolean).join(" ")}
                 onClick={() => onToggle(option)}
                 type="button"
               >
