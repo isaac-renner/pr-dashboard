@@ -1,10 +1,6 @@
 import { Rpc, RpcGroup } from "effect/unstable/rpc"
 import { Schema } from "effect"
-import {
-  Filters,
-  PRWithSessions,
-  PR,
-} from "../schemas/index.js"
+import { PRWithSessions, PR } from "../schemas/index.js"
 
 // -----------------------------------------------------------------------------
 // Response schemas
@@ -41,11 +37,13 @@ export type PRUpdateEvent = typeof PRUpdateEvent.Type
 
 // -----------------------------------------------------------------------------
 // RPC group — the type-safe contract between frontend and backend
+//
+// Filtering, grouping, bucketing all happen client-side in derived atoms.
+// The server sends the full dataset — it's small enough (~50-100 PRs).
 // -----------------------------------------------------------------------------
 
 export class PrDashboardRpc extends RpcGroup.make(
   Rpc.make("getPrs", {
-    payload: Filters,
     success: PrsResponse,
   }),
   Rpc.make("refresh", {
