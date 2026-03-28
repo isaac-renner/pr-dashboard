@@ -16,6 +16,7 @@
   --text: #000000;
   --border-color: #000000;
   --hover: #f0f0f0;
+  --group-active: #e0e0e0;
   --selection-bg: #000000;
   --selection-text: #ffffff;
 }
@@ -26,6 +27,7 @@
     --text: #ffffff;
     --border-color: #ffffff;
     --hover: #1a1a1a;
+    --group-active: #2a2a2a;
     --selection-bg: #ffffff;
     --selection-text: #000000;
   }
@@ -375,7 +377,7 @@ details > summary {
 }
 
 .group-fold.group-active {
-  background: var(--hover);
+  background: var(--group-active);
 }
 
 .group-fold.group-active > summary {
