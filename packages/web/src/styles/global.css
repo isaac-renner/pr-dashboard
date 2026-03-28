@@ -166,22 +166,42 @@ body {
   .m-label { display: inline-block; min-width: 86px; font-size: 0.72rem; }
 }
 
-/* Repo filter chips */
+/* Repo filter popover */
+.repo-filter { position: relative; align-self: end; }
+.repo-filter-trigger {
+  background: var(--panel); color: var(--text); border: 1px solid var(--panel-border);
+  padding: 0.4rem 0.55rem; font-size: 0.8rem; cursor: pointer; font-family: inherit;
+  width: 100%; text-align: left;
+}
+.repo-filter-trigger.active { font-weight: 600; }
+.repo-filter-trigger:hover { text-decoration: underline; }
+.repo-filter-popover {
+  position: absolute; z-index: 20; top: 100%; left: 0; margin-top: 4px;
+  background: var(--panel); border: 1px solid var(--panel-border);
+  padding: 0.5rem; min-width: 280px; max-height: 360px;
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.repo-filter-search {
+  background: var(--panel); border: 1px solid var(--panel-border); color: var(--text);
+  padding: 0.35rem 0.5rem; font-size: 0.8rem; font-family: inherit; width: 100%;
+}
 .repo-filter-list {
-  display: flex; flex-wrap: wrap; gap: 0.3rem; padding-top: 0.2rem;
+  display: flex; flex-wrap: wrap; gap: 0.3rem;
+  overflow-y: auto; max-height: 260px;
 }
 .repo-chip {
   background: var(--panel); color: var(--text); border: 1px solid var(--panel-border);
   padding: 0.15rem 0.5rem; font-size: 0.7rem; cursor: pointer; font-family: inherit;
 }
 .repo-chip:hover { text-decoration: underline; }
-.repo-chip.active {
-  background: var(--text); color: var(--bg);
+.repo-chip.active { background: var(--text); color: var(--bg); }
+.repo-filter-empty { font-size: 0.75rem; color: var(--text); opacity: 0.6; padding: 0.3rem 0; }
+.repo-filter-clear {
+  background: none; border: none; color: var(--text); cursor: pointer;
+  font-size: 0.7rem; font-family: inherit; text-align: left;
+  padding: 0.3rem 0 0; opacity: 0.7; text-decoration: underline;
 }
-.repo-chip-clear {
-  font-style: italic; opacity: 0.7;
-}
-.repo-chip-clear:hover { opacity: 1; }
+.repo-filter-clear:hover { opacity: 1; }
 
 /* Chord pending indicator */
 .chord-pending { font-size: 0.75rem; opacity: 0.7; }
