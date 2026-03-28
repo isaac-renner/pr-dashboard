@@ -1,14 +1,28 @@
+import { useAtomValue } from "@effect/atom-react";
 import React, { useEffect, useRef, useState } from "react";
+import { selectedIndexAtom } from "../atoms/selection.js";
 import { timeAgo, truncate } from "../lib/format.js";
 import type { PR } from "../lib/types.js";
 
 interface PRRowProps {
   pr: PR;
+  index: number;
 }
 
-export function PRRow({ pr }: PRRowProps) {
+export function PRRow({ pr, index }: PRRowProps) {
+  const selectedIndex = useAtomValue(selectedIndexAtom);
+  const isSelected = index === selectedIndex;
+  const rowRef = useRef<HTMLDivElement>(null);
+
   const [commentsOpen, setCommentsOpen] = useState(false);
   const commentsRef = useRef<HTMLDivElement>(null);
+
+  // Scroll selected row into view
+  useEffect(() => {
+    if (isSelected && rowRef.current) {
+      rowRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [isSelected]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -41,8 +55,7 @@ export function PRRow({ pr }: PRRowProps) {
     : "Unknown";
 
   return (
-    <div className="pr-row">
-      {/* PR title + meta */}
+    <div ref={rowRef} className={`pr-row${isSelected ? " selected" : ""}`}>
       <div>
         <a href={pr.url} target="_blank" rel="noreferrer">
           #{pr.number} {pr.title}
@@ -52,20 +65,16 @@ export function PRRow({ pr }: PRRowProps) {
         </div>
       </div>
 
-      {/* Review */}
       <div>{reviewLabel}</div>
 
-      {/* Pipeline */}
       <div>
         {pr.pipelineUrl
           ? <a href={pr.pipelineUrl} target="_blank" rel="noreferrer">{pipelineLabel}</a>
           : pipelineLabel}
       </div>
 
-      {/* Conflicts */}
       <div>{mergeLabel}</div>
 
-      {/* Comments */}
       <div>
         {pr.unresolvedThreads.length > 0
           ? (

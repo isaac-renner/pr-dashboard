@@ -1,5 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
-import React from "react";
+import React, { useMemo } from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
 import { groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
@@ -13,11 +13,12 @@ function GroupSection({
   name,
   prs,
   isTicketGroup,
+  indexMap,
 }: {
   name: string;
   prs: PR[];
   isTicketGroup: boolean;
-  isStackGroup?: boolean | undefined;
+  indexMap: Map<string, number>;
 }) {
   const sorted = [...prs].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -39,7 +40,7 @@ function GroupSection({
           {latest && ` · latest ${timeAgo(latest.updatedAt)}`}
         </span>
       </summary>
-      {sorted.map((pr) => <PRRow key={pr.url} pr={pr} />)}
+      {sorted.map((pr) => <PRRow key={pr.url} pr={pr} index={indexMap.get(pr.url) ?? -1} />)}
     </details>
   );
 }
@@ -53,6 +54,13 @@ export function PRList() {
     : filters.group === "ticket"
     ? groupByTicket(filtered)
     : groupByRepo(filtered);
+
+  // Build a flat index map: PR url → index in filtered list
+  const indexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.forEach((pr, i) => map.set(pr.url, i));
+    return map;
+  }, [filtered]);
 
   if (filtered.length === 0) {
     return <div className="muted">No PRs match filters</div>;
@@ -73,7 +81,7 @@ export function PRList() {
           name={groupName}
           prs={groupPrs}
           isTicketGroup={filters.group === "ticket"}
-          isStackGroup={filters.group === "stack"}
+          indexMap={indexMap}
         />
       ))}
     </div>

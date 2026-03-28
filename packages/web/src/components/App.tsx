@@ -5,6 +5,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
+import { selectedIndexAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
 import { FilterBar } from "./FilterBar.js";
@@ -16,6 +17,8 @@ export function App() {
   const response = useAtomValue(prsResponseAtom);
   const prs = useAtomValue(prsAtom);
   const filtered = useAtomValue(filteredPrsAtom);
+  const selectedIndex = useAtomValue(selectedIndexAtom);
+  const setSelectedIndex = useAtomSet(selectedIndexAtom);
   const setGroup = useAtomSet(groupAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
@@ -26,9 +29,33 @@ export function App() {
   const repoFilterRef = useRef<HTMLButtonElement>(null);
 
   const shortcuts: ReadonlyArray<ShortcutDef> = useMemo(() => [
+    // Navigation
+    {
+      keys: "j",
+      label: "Move down",
+      action: () => setSelectedIndex((i) => Math.min(i + 1, filtered.length - 1)),
+    },
+    {
+      keys: "k",
+      label: "Move up",
+      action: () => setSelectedIndex((i) => Math.max(i - 1, 0)),
+    },
+    {
+      keys: "o",
+      label: "Open PR",
+      action: () => {
+        if (selectedIndex >= 0 && selectedIndex < filtered.length) {
+          window.open(filtered[selectedIndex]!.url, "_blank");
+        }
+      },
+    },
+
+    // Grouping
     { keys: "g r", label: "Group by repo", action: () => setGroup(Option.some("repo")) },
     { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
     { keys: "g s", label: "Group by stack", action: () => setGroup(Option.some("stack")) },
+
+    // Filters
     { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },
     { keys: "f r", label: "Open repo filter", action: () => repoFilterRef.current?.click() },
     {
@@ -40,6 +67,8 @@ export function App() {
         setSelectedPipelines([]);
       },
     },
+
+    // Help
     { keys: "?", label: "Toggle shortcut help", action: () => setHelpOpen((o) => !o) },
     {
       keys: "Escape",
@@ -48,9 +77,10 @@ export function App() {
       action: () => {
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
         setHelpOpen(false);
+        setSelectedIndex(-1);
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedIndex, filtered, selectedIndex]);
 
   const pending = useShortcuts(shortcuts);
 

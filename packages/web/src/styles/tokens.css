@@ -52,7 +52,7 @@ body {
   line-height: var(--line-height);
   background: var(--bg);
   color: var(--text);
-  padding: var(--line-height) 2ch;
+  padding: calc(var(--line-height) / 2) 2ch;
   min-height: 100vh;
   width: round(down, 100%, 1ch);
   font-variant-numeric: tabular-nums lining-nums;
@@ -360,6 +360,10 @@ details:last-child {
   border-bottom: none;
 }
 
+details > .pr-row {
+  margin-top: 0;
+}
+
 summary {
   cursor: pointer;
   user-select: none;
@@ -459,6 +463,10 @@ details[open] > summary::before {
 
 .pr-row.selected a {
   color: var(--selection-text);
+}
+
+.pr-row.selected .muted {
+  opacity: 0.8;
 }
 
 /* Keep branch/meta on same line as title without extra vertical gap */
