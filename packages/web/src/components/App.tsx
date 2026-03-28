@@ -47,7 +47,7 @@ export function App() {
     { keys: "g k", label: "Group by ticket", action: () => setGroup(Option.some("ticket")) },
 
     // Actions
-    { keys: "f", label: "Focus filter", action: () => filterInputRef.current?.focus() },
+    { keys: "/", label: "Focus search", action: () => filterInputRef.current?.focus() },
     {
       keys: "Shift+f",
       label: "Clear all filters",

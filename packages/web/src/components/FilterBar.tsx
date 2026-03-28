@@ -29,6 +29,9 @@ export function FilterBar({ filterInputRef }: FilterBarProps) {
           type="text"
           value={searchVal}
           onChange={(e) => setSearch(Option.some(e.target.value))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
           placeholder="fuzzy search PRs..."
         />
       </label>
