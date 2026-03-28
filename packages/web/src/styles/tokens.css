@@ -52,7 +52,7 @@ body {
   line-height: var(--line-height);
   background: var(--bg);
   color: var(--text);
-  padding: calc(var(--line-height) * 2) 2ch;
+  padding: var(--line-height) 2ch;
   min-height: 100vh;
   width: round(down, 100%, 1ch);
   font-variant-numeric: tabular-nums lining-nums;
