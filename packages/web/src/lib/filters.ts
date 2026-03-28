@@ -1,4 +1,4 @@
-import type { Buckets, Filters, PR } from "./types.js";
+import type { Filters, PR } from "./types.js";
 
 // -----------------------------------------------------------------------------
 // Fuzzy match — checks if all characters in query appear in order in target
@@ -65,9 +65,6 @@ export function filterPRs(prs: PR[], filters: Filters): PR[] {
         }
       }
 
-      // Drafts filter
-      if (filters.drafts === "exclude" && isDraftOrTodo(pr)) return false;
-
       return true;
     })
     .sort(
@@ -89,28 +86,6 @@ export function extractRepos(prs: PR[]): string[] {
 // -----------------------------------------------------------------------------
 // Bucketing / Grouping (unchanged)
 // -----------------------------------------------------------------------------
-
-export function isDraftOrTodo(pr: PR): boolean {
-  return pr.isDraft || /\b(WIP|TODO)\b/i.test(pr.title);
-}
-
-export function bucketize(prs: PR[]): Buckets {
-  const now: PR[] = [];
-  const today: PR[] = [];
-  const drafts: PR[] = [];
-
-  for (const pr of prs) {
-    if (pr.unresolvedCount > 0) {
-      now.push(pr);
-    } else if (isDraftOrTodo(pr)) {
-      drafts.push(pr);
-    } else {
-      today.push(pr);
-    }
-  }
-
-  return { now, today, drafts };
-}
 
 export function groupByTicket(prs: PR[]): Map<string, PR[]> {
   const groups = new Map<string, PR[]>();

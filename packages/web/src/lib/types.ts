@@ -54,12 +54,5 @@ export interface Filters {
   search: string;
   repos: ReadonlyArray<string>;
   pipeline: "all" | "failing" | "pending" | "passing" | "none";
-  drafts: "include" | "exclude";
   group: "ticket" | "repo";
-}
-
-export interface Buckets {
-  now: PR[];
-  today: PR[];
-  drafts: PR[];
 }

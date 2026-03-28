@@ -2,8 +2,8 @@
  * Filter atoms — URL-synced where appropriate.
  *
  * search: fuzzy text search (URL-synced)
- * repos: multi-select repo filter (local state, not URL-synced — too noisy)
- * pipeline, drafts, group: URL-synced via searchParam
+ * repos: multi-select repo filter (local state)
+ * pipeline, group: URL-synced via searchParam
  */
 
 import { Schema } from "effect";
@@ -14,10 +14,9 @@ import type { Filters } from "../lib/types.js";
 
 export const searchAtom = Atom.searchParam("q", { schema: Schema.String });
 export const pipelineAtom = Atom.searchParam("pipeline", { schema: Schema.String });
-export const draftsAtom = Atom.searchParam("drafts", { schema: Schema.String });
 export const groupAtom = Atom.searchParam("group", { schema: Schema.String });
 
-// --- Local state: selected repos (array, not URL-synced) ---
+// --- Local state: selected repos ---
 
 export const selectedReposAtom: Atom.Writable<ReadonlyArray<string>> = Atom.make(
   [] as ReadonlyArray<string>,
@@ -35,7 +34,6 @@ export const filtersAtom: Atom.Atom<Filters> = Atom.make((get) => {
     search: getParam(searchAtom, ""),
     repos: get(selectedReposAtom),
     pipeline: getParam(pipelineAtom, "all") as Filters["pipeline"],
-    drafts: getParam(draftsAtom, "include") as Filters["drafts"],
     group: getParam(groupAtom, "ticket") as Filters["group"],
   };
 });

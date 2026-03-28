@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import React, { useState } from "react";
-import { bucketedPrsAtom } from "../atoms/derived.js";
+import { filteredPrsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
 import { groupByRepo, groupByTicket } from "../lib/filters.js";
 import { timeAgo } from "../lib/format.js";
@@ -78,33 +78,22 @@ function GroupSection({
   );
 }
 
-// --- Bucket section ---
+// --- PR List (flat, grouped by ticket or repo) ---
 
-function BucketSection({
-  title,
-  prs,
-  group,
-}: {
-  title: string;
-  prs: PR[];
-  group: "ticket" | "repo";
-}) {
-  const [collapsed, setCollapsed] = useState(false);
+export function PRList() {
+  const filtered = useAtomValue(filteredPrsAtom);
+  const filters = useAtomValue(filtersAtom);
 
-  const grouped = group === "ticket" ? groupByTicket(prs) : groupByRepo(prs);
+  const grouped = filters.group === "ticket"
+    ? groupByTicket(filtered)
+    : groupByRepo(filtered);
+
+  if (filtered.length === 0) {
+    return <p className="count">No PRs match filters</p>;
+  }
 
   return (
-    <div className={`bucket${collapsed ? " collapsed" : ""}`}>
-      <div
-        className="bucket-header bucket-toggle"
-        onClick={() => setCollapsed((c) => !c)}
-      >
-        <div className="bucket-title">{title}</div>
-        <div className="bucket-meta">
-          {prs.length} PR{prs.length === 1 ? "" : "s"}
-          <span className="bucket-indicator" />
-        </div>
-      </div>
+    <div className="bucket">
       <div className="bucket-body">
         <ColumnHeaders />
         {Array.from(grouped.entries()).map(([groupName, groupPrs]) => (
@@ -112,49 +101,10 @@ function BucketSection({
             key={groupName}
             name={groupName}
             prs={groupPrs}
-            isTicketGroup={group === "ticket"}
+            isTicketGroup={filters.group === "ticket"}
           />
         ))}
       </div>
     </div>
-  );
-}
-
-// --- BucketList (reads from atoms) ---
-
-interface BucketListProps {
-  readonly bucketNowRef?: React.RefObject<HTMLDivElement | null>;
-  readonly bucketTodayRef?: React.RefObject<HTMLDivElement | null>;
-  readonly bucketDraftsRef?: React.RefObject<HTMLDivElement | null>;
-}
-
-export function BucketList({ bucketNowRef, bucketTodayRef, bucketDraftsRef }: BucketListProps) {
-  const buckets = useAtomValue(bucketedPrsAtom);
-  const filters = useAtomValue(filtersAtom);
-
-  const sections: Array<{ title: string; prs: PR[]; ref?: React.RefObject<HTMLDivElement | null> | undefined }> = [
-    { title: "Address Now", prs: buckets.now, ref: bucketNowRef },
-    { title: "Address Today", prs: buckets.today, ref: bucketTodayRef },
-    { title: "Drafts / TODOs", prs: buckets.drafts, ref: bucketDraftsRef },
-  ];
-
-  const nonEmpty = sections.filter((s) => s.prs.length > 0);
-
-  if (nonEmpty.length === 0) {
-    return <p className="count">No PRs match filters</p>;
-  }
-
-  return (
-    <>
-      {nonEmpty.map((s) => (
-        <div key={s.title} ref={s.ref}>
-          <BucketSection
-            title={s.title}
-            prs={s.prs}
-            group={filters.group}
-          />
-        </div>
-      ))}
-    </>
   );
 }
