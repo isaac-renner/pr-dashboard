@@ -371,6 +371,10 @@ details > summary {
   margin-top: 0;
 }
 
+.group-fold.group-active > summary {
+  font-weight: 800;
+}
+
 summary {
   cursor: pointer;
   user-select: none;
@@ -439,7 +443,8 @@ details[open] > summary::before {
   grid-template-columns: var(--col);
   gap: 0 1ch;
   align-items: baseline;
-  padding: calc(var(--line-height) / 2) 1ch;
+  margin: 0 -1ch;
+  padding: calc(var(--line-height) / 2) 2ch;
 }
 
 .pr-grid-header {
@@ -448,16 +453,13 @@ details[open] > summary::before {
 }
 
 .pr-grid-header > *,
-.pr-row > * {
+.pr-row > *,
+.pr-row > *:first-child > * {
   margin-top: 0;
 }
 
 .pr-row {
   border-bottom: var(--border) dashed var(--border-color);
-  margin-left: -1ch;
-  margin-right: -1ch;
-  padding-left: 2ch;
-  padding-right: 2ch;
 }
 
 .pr-row:last-child {
@@ -479,11 +481,6 @@ details[open] > summary::before {
 
 .pr-row.selected .muted {
   opacity: 0.8;
-}
-
-/* Keep branch/meta on same line as title without extra vertical gap */
-.pr-row > *:first-child > * {
-  margin-top: 0;
 }
 
 @media (max-width: 720px) {

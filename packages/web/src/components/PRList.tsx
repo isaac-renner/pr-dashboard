@@ -2,6 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import React from "react";
 import { filteredPrsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
+import { selectedUrlAtom } from "../atoms/selection.js";
 import { groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
 import { timeAgo } from "../lib/format.js";
 import type { PR } from "../lib/types.js";
@@ -13,10 +14,12 @@ function GroupSection({
   name,
   prs,
   isTicketGroup,
+  hasSelectedRow,
 }: {
   name: string;
   prs: PR[];
   isTicketGroup: boolean;
+  hasSelectedRow: boolean;
 }) {
   const sorted = [...prs].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
@@ -29,7 +32,7 @@ function GroupSection({
     : name;
 
   return (
-    <details open className="group-fold">
+    <details open className={`group-fold${hasSelectedRow ? " group-active" : ""}`}>
       <summary>
         <strong>{titleContent}</strong>
         {" "}
@@ -46,6 +49,7 @@ function GroupSection({
 export function PRList() {
   const filtered = useAtomValue(filteredPrsAtom);
   const filters = useAtomValue(filtersAtom);
+  const selectedUrl = useAtomValue(selectedUrlAtom);
 
   if (filtered.length === 0) {
     return <div className="muted">No PRs match filters</div>;
@@ -91,6 +95,7 @@ export function PRList() {
           name={groupName}
           prs={groupPrs}
           isTicketGroup={filters.group === "ticket"}
+          hasSelectedRow={selectedUrl !== null && groupPrs.some((pr) => pr.url === selectedUrl)}
         />
       ))}
     </div>

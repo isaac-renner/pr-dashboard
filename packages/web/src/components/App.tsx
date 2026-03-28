@@ -48,9 +48,8 @@ export function App() {
   function moveSelection(delta: number) {
     if (displayOrder.length === 0) return;
     if (delta < 0 && (selectedIndex === 0 || selectedIndex === -1)) {
-      // At top or no selection — focus search
       setSelectedUrl(null);
-      filterInputRef.current?.focus();
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     const next = selectedIndex === -1
