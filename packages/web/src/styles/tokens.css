@@ -374,6 +374,10 @@ details > summary {
   margin-top: 0;
 }
 
+.group-fold.group-active {
+  background: var(--hover);
+}
+
 .group-fold.group-active > summary {
   font-weight: 800;
 }
