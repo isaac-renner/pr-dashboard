@@ -35,7 +35,7 @@ const program = Effect.gen(function* () {
   const github = yield* Effect.service(GitHubClient)
   const opencode = yield* Effect.service(OpenCodeClient)
 
-  // --- Mutable state managed via Effect Refs ---
+  // --- State ---
 
   const sessionCacheRef = yield* Ref.make(
     new Map<string, ReadonlyArray<SessionRef>>(),
@@ -44,43 +44,56 @@ const program = Effect.gen(function* () {
   const refreshingRef = yield* Ref.make(false)
 
   // --- Refresh logic ---
+  // Self-contained: reads services from closure, manages its own guard.
+  // Always resets refreshingRef, even on error.
 
-  const refreshCache = Effect.gen(function* () {
+  const refreshCache: Effect.Effect<void> = Effect.gen(function* () {
     const isRefreshing = yield* Ref.get(refreshingRef)
     if (isRefreshing) return
 
     yield* Ref.set(refreshingRef, true)
 
-    // Fetch PRs
-    const prs = yield* github.fetchAllOpenPRs.pipe(
-      Effect.catch(() => prStore.getAll),
-    )
-    yield* prStore.replaceAll(prs)
-
-    // Correlate sessions
-    if (opencode.enabled) {
-      const allPrs = yield* prStore.getAll
-      const correlations = yield* opencode.correlateWithPRs(allPrs).pipe(
-        Effect.catch(() =>
+    yield* Effect.gen(function* () {
+      // Fetch PRs — on failure, keep the existing store contents
+      const prs = yield* github.fetchAllOpenPRs.pipe(
+        Effect.catch((err) =>
           Effect.gen(function* () {
-            yield* Effect.logWarning("OpenCode fetch failed, keeping old cache")
-            return yield* Ref.get(sessionCacheRef)
+            yield* Effect.logWarning(`GitHub fetch failed: ${err.message}`)
+            return yield* prStore.getAll
           }),
         ),
       )
-      yield* Ref.set(
-        sessionCacheRef,
-        new Map(correlations) as Map<string, ReadonlyArray<SessionRef>>,
+      yield* prStore.replaceAll(prs)
+
+      // Correlate sessions — on failure, keep the old cache
+      if (opencode.enabled) {
+        const allPrs = yield* prStore.getAll
+        const correlations = yield* opencode.correlateWithPRs(allPrs).pipe(
+          Effect.catch(() =>
+            Effect.gen(function* () {
+              yield* Effect.logWarning(
+                "OpenCode fetch failed, keeping old session cache",
+              )
+              return yield* Ref.get(sessionCacheRef)
+            }),
+          ),
+        )
+        yield* Ref.set(
+          sessionCacheRef,
+          new Map(correlations) as Map<string, ReadonlyArray<SessionRef>>,
+        )
+      }
+
+      yield* Ref.set(lastRefreshedRef, new Date().toISOString())
+
+      const count = (yield* prStore.getAll).length
+      const sessionCount = (yield* Ref.get(sessionCacheRef)).size
+      yield* Effect.log(
+        `Cache refreshed: ${count} PRs, ${sessionCount} with sessions`,
       )
-    }
-
-    yield* Ref.set(lastRefreshedRef, new Date().toISOString())
-    yield* Ref.set(refreshingRef, false)
-
-    const lastRefreshed = yield* Ref.get(lastRefreshedRef)
-    const sessions = yield* Ref.get(sessionCacheRef)
-    yield* Effect.log(
-      `Cache refreshed: ${prs.length} PRs, ${sessions.size} with sessions [${lastRefreshed}]`,
+    }).pipe(
+      // Ensure refreshing flag is always reset
+      Effect.ensuring(Ref.set(refreshingRef, false)),
     )
   })
 
@@ -96,21 +109,24 @@ const program = Effect.gen(function* () {
     )
   }, REFRESH_INTERVAL_MS)
 
-  // --- Build response helper ---
+  // --- Build API response ---
 
-  const buildPrsResponse = Effect.gen(function* () {
+  const buildPrsResponse: Effect.Effect<{
+    prs: Array<PR & { sessions: ReadonlyArray<SessionRef> }>
+    lastRefreshed: string | null
+  }> = Effect.gen(function* () {
     const allPrs = yield* prStore.getAll
     const sessions = yield* Ref.get(sessionCacheRef)
     const lastRefreshed = yield* Ref.get(lastRefreshedRef)
 
     const prs = allPrs
-      .filter((pr: PR) => pr.state === "OPEN")
-      .map((pr: PR) => ({
+      .filter((pr) => pr.state === "OPEN")
+      .map((pr) => ({
         ...pr,
         sessions: sessions.get(pr.url) ?? [],
       }))
       .sort(
-        (a: PR, b: PR) =>
+        (a, b) =>
           new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       )
 
@@ -134,11 +150,13 @@ const program = Effect.gen(function* () {
       // API: manual refresh
       if (url.pathname === "/api/refresh" && req.method === "POST") {
         await Effect.runPromise(refreshCache)
-        const lastRefreshed = await Effect.runPromise(Ref.get(lastRefreshedRef))
+        const lastRefreshed = await Effect.runPromise(
+          Ref.get(lastRefreshedRef),
+        )
         return Response.json({ ok: true, lastRefreshed })
       }
 
-      // Dev: proxy to Vite
+      // Dev: proxy to Vite dev server
       if (process.env.NODE_ENV !== "production") {
         try {
           const viteUrl = `http://localhost:5173${url.pathname}${url.search}`
@@ -155,7 +173,7 @@ const program = Effect.gen(function* () {
             headers: viteRes.headers,
           })
         } catch {
-          // Vite not running
+          // Vite not running — fall through to 404
         }
       }
 

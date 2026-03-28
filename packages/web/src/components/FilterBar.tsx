@@ -26,22 +26,22 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
   return (
     <form className="filters" onSubmit={handleSubmit}>
       <label>
-        Exclude
+        Exclude keywords (comma-separated)
         <input
           type="text"
           value={exclude}
           onChange={(e) => setExclude(e.target.value)}
-          placeholder="keywords to exclude"
+          placeholder="endpoint audit, loki"
         />
       </label>
 
       <label>
-        Repo
+        Filter by repo
         <input
           type="text"
           value={repo}
           onChange={(e) => setRepo(e.target.value)}
-          placeholder="filter by repo"
+          placeholder="e.g. frontend"
         />
       </label>
 
@@ -62,11 +62,11 @@ export function FilterBar({ filters, onFiltersChange }: FilterBarProps) {
           value={pipeline}
           onChange={(e) => setPipeline(e.target.value as Filters["pipeline"])}
         >
-          <option value="all">All</option>
+          <option value="all">Any</option>
           <option value="failing">Failing</option>
           <option value="pending">Pending</option>
           <option value="passing">Passing</option>
-          <option value="none">None</option>
+          <option value="none">No pipeline</option>
         </select>
       </label>
 

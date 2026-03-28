@@ -15,13 +15,13 @@ export function PRRow({ pr }: PRRowProps) {
   const sessionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
+    function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setCommentsOpen(false)
         setSessionsOpen(false)
       }
     }
-    function handleClickOutside(e: MouseEvent) {
+    function onClick(e: MouseEvent) {
       if (commentsRef.current && !commentsRef.current.contains(e.target as Node)) {
         setCommentsOpen(false)
       }
@@ -29,196 +29,205 @@ export function PRRow({ pr }: PRRowProps) {
         setSessionsOpen(false)
       }
     }
-    document.addEventListener("keydown", handleKeyDown)
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("keydown", onKey)
+    document.addEventListener("mousedown", onClick)
     return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener("keydown", onKey)
+      document.removeEventListener("mousedown", onClick)
     }
   }, [])
 
-  const statusClass = pr.isDraft ? "draft" : pr.state === "OPEN" ? "open" : "closed"
-
-  const reviewLabel =
-    pr.reviewState === "APPROVED"
-      ? "Approved"
-      : pr.reviewState === "CHANGES_REQUESTED"
-        ? "Changes"
-        : "Pending"
-  const reviewClass =
-    pr.reviewState === "APPROVED"
-      ? "approved"
-      : pr.reviewState === "CHANGES_REQUESTED"
-        ? "changes-requested"
-        : "pending"
-
+  // --- Pipeline ---
   const pipelineLabel =
-    pr.pipelineState === "SUCCESS"
-      ? "Passing"
-      : pr.pipelineState === "FAILURE"
-        ? "Failing"
-        : pr.pipelineState === "PENDING"
-          ? "Pending"
-          : "--"
-  const pipelineClass =
-    pr.pipelineState === "SUCCESS"
-      ? "passing"
-      : pr.pipelineState === "FAILURE"
-        ? "failing"
-        : pr.pipelineState === "PENDING"
-          ? "pending"
-          : ""
+    pr.pipelineState === "FAILURE" ? "Failing" :
+    pr.pipelineState === "SUCCESS" ? "Passing" :
+    pr.pipelineState === "PENDING" ? "Pending" : "--"
+  const pipelineCls =
+    pr.pipelineState === "FAILURE" ? "checks-failure" :
+    pr.pipelineState === "SUCCESS" ? "checks-success" :
+    pr.pipelineState === "PENDING" ? "checks-pending" : "checks-none"
 
-  const conflictsLabel =
-    pr.mergeable === "CONFLICTING"
-      ? "Conflict"
-      : pr.mergeable === "MERGEABLE"
-        ? "Clear"
-        : "Unknown"
-  const conflictsClass =
-    pr.mergeable === "CONFLICTING"
-      ? "conflict"
-      : pr.mergeable === "MERGEABLE"
-        ? "clear"
-        : "unknown"
+  // --- Review ---
+  const reviewLabel =
+    pr.reviewState === "CHANGES_REQUESTED" ? "Changes" :
+    pr.reviewState === "APPROVED" ? "Approved" : "Pending"
+  const reviewCls =
+    pr.reviewState === "CHANGES_REQUESTED" ? "review-changes" :
+    pr.reviewState === "APPROVED" ? "review-approved" : "review-pending"
 
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text).catch(() => {
-      const ta = document.createElement("textarea")
-      ta.value = text
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand("copy")
-      document.body.removeChild(ta)
-    })
+  // --- Mergeable ---
+  const mergeLabel =
+    pr.mergeable === "CONFLICTING" ? "Conflict" :
+    pr.mergeable === "MERGEABLE" ? "Clear" : "Unknown"
+  const mergeCls =
+    pr.mergeable === "CONFLICTING" ? "mergeable-conflict" :
+    pr.mergeable === "MERGEABLE" ? "mergeable-clean" : "mergeable-unknown"
+
+  // --- Copy ---
+  function copyUrl(url: string, btn: HTMLButtonElement) {
+    navigator.clipboard.writeText(url).then(
+      () => {
+        btn.textContent = "copied"
+        btn.classList.add("copied")
+        setTimeout(() => { btn.textContent = "copy"; btn.classList.remove("copied") }, 1500)
+      },
+      () => {
+        btn.textContent = "failed"
+        setTimeout(() => { btn.textContent = "copy" }, 1500)
+      },
+    )
   }
 
   return (
     <div className="pr-row">
+      {/* PR title + meta */}
       <div className="pr-title">
-        <a href={pr.url} target="_blank" rel="noopener noreferrer">
-          {truncate(pr.title, 60)}
+        <a href={pr.url} target="_blank" rel="noreferrer">
+          #{pr.number} {pr.title}
         </a>
-        <span className="pr-meta">
-          <span className={`status ${statusClass}`}>
-            {pr.isDraft ? "Draft" : pr.state === "OPEN" ? "Open" : "Closed"}
+        <div className="pr-meta">
+          <span className={pr.isDraft ? "status-draft" : "status-open"}>
+            {pr.isDraft ? "Draft" : "Open"}
           </span>
-          <span className="time-ago">{timeAgo(pr.updatedAt)}</span>
+          {" • "}
+          {timeAgo(pr.updatedAt)}
+        </div>
+      </div>
+
+      {/* Review */}
+      <div className="mono">
+        <span className="m-label">Review</span>
+        <span className={reviewCls}>{reviewLabel}</span>
+      </div>
+
+      {/* Pipeline */}
+      <div className="mono">
+        <span className="m-label">Pipeline</span>
+        <span>
+          {pr.pipelineUrl ? (
+            <a className={`checks ${pipelineCls}`} href={pr.pipelineUrl} target="_blank" rel="noreferrer">
+              {pipelineLabel}
+            </a>
+          ) : (
+            <span className={`checks ${pipelineCls}`}>{pipelineLabel}</span>
+          )}
         </span>
       </div>
 
-      <div className={`review-state ${reviewClass}`}>{reviewLabel}</div>
-
-      <div className={`pipeline ${pipelineClass}`}>
-        {pr.pipelineUrl ? (
-          <a href={pr.pipelineUrl} target="_blank" rel="noopener noreferrer">
-            {pipelineLabel}
-          </a>
-        ) : (
-          pipelineLabel
-        )}
+      {/* Deploy */}
+      <div className="mono hide-md">
+        <span className="m-label">Deploy</span>
+        <span>
+          {pr.deployLink ? (
+            <a className="deploy" href={pr.deployLink.url} target="_blank" rel="noreferrer">
+              {truncate(pr.deployLink.label, 28)}
+            </a>
+          ) : (
+            <span className="sessions-none">--</span>
+          )}
+        </span>
       </div>
 
-      <div className="deploy hide-md">
-        {pr.deployLink ? (
-          <a href={pr.deployLink.url} target="_blank" rel="noopener noreferrer">
-            {pr.deployLink.label}
-          </a>
-        ) : (
-          "--"
-        )}
+      {/* Conflicts */}
+      <div className="mono">
+        <span className="m-label">Conflicts</span>
+        <span className={mergeCls}>{mergeLabel}</span>
       </div>
 
-      <div className={`conflicts ${conflictsClass}`}>{conflictsLabel}</div>
-
-      <div className="comments-cell" ref={commentsRef}>
-        <button
-          className={`badge ${pr.unresolvedCount > 0 ? "has-count" : ""}`}
-          onClick={() => setCommentsOpen((o) => !o)}
-        >
-          {pr.unresolvedCount}
-        </button>
-        {commentsOpen && pr.unresolvedThreads.length > 0 && (
-          <div className="popover comments-popover">
-            <div className="popover-header">
-              Unresolved Comments ({pr.unresolvedCount})
-            </div>
-            <div className="popover-body">
-              {pr.unresolvedThreads.map((thread) => (
-                <div key={thread.id} className="thread-item">
-                  <div className="thread-meta">
-                    <strong>{thread.authorLogin}</strong>
-                    <span className="time-ago">{timeAgo(thread.createdAt)}</span>
-                    {thread.replied && <span className="replied-tag">replied</span>}
+      {/* Comments */}
+      <div className="mono">
+        <span className="m-label">Comments</span>
+        <span>
+          {pr.unresolvedThreads.length > 0 ? (
+            <div className={`comment-cell${commentsOpen ? " open" : ""}`} ref={commentsRef}>
+              <span
+                className="comment-badge"
+                onClick={(e) => { e.stopPropagation(); setCommentsOpen((o) => !o) }}
+              >
+                {pr.unresolvedThreads.length}
+              </span>
+              <div className="comment-list">
+                {pr.unresolvedThreads.slice(0, 8).map((t) => (
+                  <div key={t.id} className="comment-item">
+                    <a href={t.url} target="_blank" rel="noreferrer">
+                      {t.authorLogin}: {truncate(t.bodyText, 60)}
+                    </a>
+                    <div className="comment-meta">
+                      {timeAgo(t.createdAt)} • {t.replied ? "replied earlier" : "unaddressed"}
+                    </div>
                   </div>
-                  <div className="thread-body">{truncate(thread.bodyText, 120)}</div>
-                  <a
-                    href={thread.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="thread-link"
-                  >
-                    View
-                  </a>
-                </div>
-              ))}
+                ))}
+                {pr.unresolvedThreads.length > 8 && (
+                  <div className="comment-meta" style={{ padding: "0.3rem 0" }}>
+                    +{pr.unresolvedThreads.length - 8} more
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <span className="sessions-none">--</span>
+          )}
+        </span>
       </div>
 
-      <div className="ticket-cell hide-md">
-        {pr.jiraTicket ? (
-          <a
-            href={`${JIRA_BASE}/${pr.jiraTicket}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {pr.jiraTicket}
-          </a>
-        ) : (
-          "--"
-        )}
+      {/* Ticket */}
+      <div className="mono hide-md">
+        <span className="m-label">Ticket</span>
+        <span>
+          {pr.jiraTicket ? (
+            <a className="jira" href={`${JIRA_BASE}/${pr.jiraTicket}`} target="_blank" rel="noreferrer">
+              {pr.jiraTicket}
+            </a>
+          ) : (
+            "--"
+          )}
+        </span>
       </div>
 
-      <div className="sessions-cell" ref={sessionsRef}>
-        <button
-          className={`badge ${pr.sessions.length > 0 ? "has-count" : ""}`}
-          onClick={() => setSessionsOpen((o) => !o)}
-        >
-          {pr.sessions.length}
-        </button>
-        {sessionsOpen && pr.sessions.length > 0 && (
-          <div className="popover sessions-popover">
-            <div className="popover-header">
-              Sessions ({pr.sessions.length})
+      {/* Sessions */}
+      <div className="mono">
+        <span className="m-label">Sessions</span>
+        <span>
+          {pr.sessions.length > 0 ? (
+            <div className={`sessions-cell${sessionsOpen ? " open" : ""}`} ref={sessionsRef}>
+              <span
+                className="session-badge"
+                onClick={(e) => { e.stopPropagation(); setSessionsOpen((o) => !o) }}
+              >
+                {pr.sessions.length}
+              </span>
+              <div className="session-list">
+                {pr.sessions.slice(0, 8).map((s) => (
+                  <div key={s.id} className="session-item">
+                    <a href={s.url} target="_blank" rel="noreferrer" title={s.title}>
+                      {truncate(s.title, 45)}
+                    </a>
+                    <span className="session-meta">
+                      {timeAgo(new Date(s.time.updated).toISOString())}
+                      {s.childCount > 0 && (
+                        <span className="session-children"> ({s.childCount} sub)</span>
+                      )}
+                    </span>
+                    <button
+                      className="copy-btn"
+                      onClick={(e) => copyUrl(s.url, e.currentTarget)}
+                      title="Copy URL"
+                    >
+                      copy
+                    </button>
+                  </div>
+                ))}
+                {pr.sessions.length > 8 && (
+                  <div className="session-meta" style={{ padding: "0.3rem 0" }}>
+                    +{pr.sessions.length - 8} more
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="popover-body">
-              {pr.sessions.map((session) => (
-                <div key={session.id} className="session-item">
-                  <a
-                    href={session.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="session-link"
-                  >
-                    {truncate(session.title, 60)}
-                  </a>
-                  <span className="session-meta">
-                    {session.childCount} messages
-                  </span>
-                  <button
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(session.url)}
-                    title="Copy session URL"
-                  >
-                    Copy
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          ) : (
+            <span className="sessions-none">--</span>
+          )}
+        </span>
       </div>
     </div>
   )

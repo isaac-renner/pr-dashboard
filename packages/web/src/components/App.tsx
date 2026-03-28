@@ -2,6 +2,7 @@ import React, { useMemo } from "react"
 import { usePRs } from "../hooks/usePRs.js"
 import { useFilters } from "../hooks/useFilters.js"
 import { filterPRs } from "../lib/filters.js"
+import { timeAgo } from "../lib/format.js"
 import { FilterBar } from "./FilterBar.js"
 import { BucketList } from "./BucketList.js"
 
@@ -12,34 +13,53 @@ export function App() {
   const filtered = useMemo(() => filterPRs(prs, filters), [prs, filters])
 
   return (
-    <div className="app">
-      <header className="header">
-        <h1>PR Dashboard</h1>
-        <p className="tagline">Triage by urgency, ticket, and repo</p>
+    <>
+      <div className="header">
+        <div>
+          <h1>PR Dashboard</h1>
+          <div className="tagline">Triage by urgency, ticket, and repo</div>
+        </div>
         <div className="refresh-bar">
-          {lastRefreshed && (
-            <span className="last-refreshed">
-              Last refreshed: {lastRefreshed}
-            </span>
-          )}
-          <button className="refresh-btn" onClick={refresh} disabled={loading}>
+          <span id="refresh-status">
+            {loading ? (
+              <span className="refreshing">
+                <span className="spinner spinner-sm" />
+                Refreshing...
+              </span>
+            ) : lastRefreshed ? (
+              `Last refreshed ${timeAgo(lastRefreshed)}`
+            ) : (
+              "Loading..."
+            )}
+          </span>
+          <button onClick={refresh} disabled={loading}>
             Refresh
           </button>
         </div>
-      </header>
+      </div>
 
       <FilterBar filters={filters} onFiltersChange={setFilters} />
 
-      <main className="content">
-        {loading && <div className="loading">Loading...</div>}
-        {error && <div className="error">{error}</div>}
-        {!loading && !error && (
+      <div id="content">
+        {loading && !prs.length && (
+          <div className="loading">
+            <div className="spinner" />
+            Loading...
+          </div>
+        )}
+        {error && <div className="error">Error: {error}</div>}
+        {prs.length > 0 && (
           <>
+            <p className="count">
+              {filtered.length} PR{filtered.length === 1 ? "" : "s"}
+            </p>
             <BucketList prs={filtered} group={filters.group} />
-            <div className="pr-count">{filtered.length} PRs</div>
           </>
         )}
-      </main>
-    </div>
+        {!loading && !error && prs.length === 0 && (
+          <p className="count">No PRs found</p>
+        )}
+      </div>
+    </>
   )
 }
