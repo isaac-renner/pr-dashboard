@@ -496,7 +496,7 @@ details[open] > summary::before {
 .app-layout {
   display: flex;
   gap: 0;
-  min-height: calc(100vh - var(--line-height) * 4);
+  align-items: flex-start;
 }
 
 .app-main {
@@ -515,9 +515,10 @@ details[open] > summary::before {
   flex-shrink: 0;
   border-left: var(--border) solid var(--border-color);
   overflow-y: auto;
-  max-height: calc(100vh - var(--line-height) * 3);
   position: sticky;
   top: calc(var(--line-height) / 2);
+  max-height: calc(100vh - var(--line-height) * 3);
+  margin-top: 0;
 }
 
 .sidebar-content {
