@@ -1,0 +1,410 @@
+/*
+ * Design system tokens — the monospace grid.
+ *
+ * Everything is 1rem. Horizontal space is measured in ch.
+ * Vertical space is multiples of --line-height.
+ * All interactive elements are exactly --line-height * 2 tall.
+ * Borders are --border thick everywhere.
+ */
+
+:root {
+  --font: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --line-height: 1.4rem;
+  --border: 2px;
+
+  --bg: #ffffff;
+  --text: #000000;
+  --border-color: #000000;
+  --selection-bg: #000000;
+  --selection-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --text: #ffffff;
+    --border-color: #ffffff;
+    --selection-bg: #ffffff;
+    --selection-text: #000000;
+  }
+}
+
+/* ── Reset ── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 0 !important;
+}
+
+/* ── Base ── */
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: var(--line-height);
+  background: var(--bg);
+  color: var(--text);
+  padding: calc(var(--line-height) * 2) 2ch;
+  min-height: 100vh;
+  max-width: min(120ch, 100%);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ── Vertical rhythm: every sibling gets one line of space ── */
+
+* + * {
+  margin-top: var(--line-height);
+}
+
+/* Reset margin for elements that shouldn't have it */
+li + li,
+td, th,
+option,
+br,
+span, a, strong, em, code, kbd,
+.no-gap, .no-gap > * {
+  margin-top: 0;
+}
+
+/* ── Typography: one size, hierarchy via weight/case/opacity ── */
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: 1rem;
+  line-height: var(--line-height);
+}
+
+h1 {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+h2 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h3 {
+  font-weight: 600;
+}
+
+a {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* ── Interactive elements: all the same height ── */
+
+input, select, button, textarea {
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: var(--line-height);
+  height: calc(var(--line-height) * 2);
+  padding: calc(var(--line-height) / 2 - var(--border) / 2) calc(1ch - var(--border) / 2);
+  background: var(--bg);
+  color: var(--text);
+  border: var(--border) solid var(--border-color);
+  margin-top: 0;
+}
+
+input:focus, select:focus, button:focus, textarea:focus {
+  outline: var(--border) solid var(--border-color);
+  outline-offset: var(--border);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  line-height: var(--line-height);
+}
+
+label > input,
+label > select,
+label > textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+}
+
+/* ── Borders ── */
+
+.bordered {
+  border: var(--border) solid var(--border-color);
+}
+
+hr {
+  border: none;
+  border-top: var(--border) solid var(--border-color);
+  margin: var(--line-height) 0;
+}
+
+/* ── Selection / inversion ── */
+
+.selected,
+.inverted {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.inverted a {
+  color: var(--selection-text);
+}
+
+/* ── Opacity for secondary text ── */
+
+.muted {
+  opacity: 0.6;
+}
+
+.muted-more {
+  opacity: 0.4;
+}
+
+/* ── Keyboard shortcuts ── */
+
+kbd {
+  border: 1px solid var(--border-color);
+  padding: 0 1ch;
+  min-width: 2ch;
+  display: inline-block;
+  text-align: center;
+  line-height: var(--line-height);
+}
+
+/* ── Chips (toggle buttons) ── */
+
+.chip {
+  display: inline-block;
+  border: var(--border) solid var(--border-color);
+  padding: 0 1ch;
+  line-height: var(--line-height);
+  height: auto;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+}
+
+.chip:hover {
+  text-decoration: underline;
+}
+
+.chip.active {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.chip.active:hover {
+  text-decoration: underline;
+}
+
+/* ── Popover ── */
+
+.popover-anchor {
+  position: relative;
+}
+
+.popover {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  margin-top: 0;
+  background: var(--bg);
+  border: var(--border) solid var(--border-color);
+  padding: var(--line-height) 1ch;
+  min-width: 30ch;
+  max-height: calc(var(--line-height) * 20);
+  overflow-y: auto;
+}
+
+.popover > * + * {
+  margin-top: calc(var(--line-height) / 2);
+}
+
+/* ── Panel (bordered container) ── */
+
+.panel {
+  border: var(--border) solid var(--border-color);
+}
+
+.panel-header {
+  padding: calc(var(--line-height) / 2) 1ch;
+  border-bottom: var(--border) solid var(--border-color);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+}
+
+.panel-body {
+  padding: 0 1ch;
+}
+
+/* ── Floating bar (bottom of viewport) ── */
+
+.floating-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--line-height) * 2);
+  line-height: calc(var(--line-height) * 2);
+  background: var(--bg);
+  border-top: var(--border) solid var(--border-color);
+  padding: 0 2ch;
+  z-index: 50;
+  display: flex;
+  gap: 2ch;
+  align-items: center;
+}
+
+/* ── Overlay (modal backdrop) ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-modal {
+  background: var(--bg);
+  border: var(--border) solid var(--border-color);
+  padding: 0;
+  min-width: 40ch;
+  max-width: 60ch;
+  max-height: calc(var(--line-height) * 30);
+  overflow-y: auto;
+}
+
+/* ── Table ── */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: calc(var(--line-height) / 2) 1ch;
+  vertical-align: top;
+  border-bottom: 1px dotted var(--border-color);
+}
+
+th {
+  font-weight: 600;
+  border-bottom: var(--border) solid var(--border-color);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tr.selected td {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+tr.selected td a {
+  color: var(--selection-text);
+}
+
+/* ── Details/summary (native collapsible) ── */
+
+details {
+  border-bottom: 1px dashed var(--border-color);
+}
+
+details:last-child {
+  border-bottom: none;
+}
+
+summary {
+  cursor: pointer;
+  user-select: none;
+  padding: calc(var(--line-height) / 2) 0;
+  font-weight: 600;
+  list-style: none;
+}
+
+summary::before {
+  content: "[+] ";
+}
+
+details[open] > summary::before {
+  content: "[-] ";
+}
+
+/* ── Spinner ── */
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner {
+  display: inline-block;
+  width: 2ch;
+  height: var(--line-height);
+  border: var(--border) solid var(--border-color);
+  border-top-color: transparent;
+  border-radius: 50% !important;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+/* ── Layout ── */
+
+.flex {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1ch;
+}
+
+.flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1ch;
+}
+
+.gap-0 > * + * { margin-top: 0; }
+
+/* ── Responsive ── */
+
+@media (max-width: 720px) {
+  body {
+    padding: var(--line-height) 1ch;
+  }
+}
