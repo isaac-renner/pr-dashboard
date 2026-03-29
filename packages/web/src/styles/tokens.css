@@ -559,8 +559,14 @@ details[open] > summary::before {
 .sidebar-field {
   display: flex;
   justify-content: space-between;
+  gap: 2ch;
   padding: calc(var(--line-height) / 4) 1ch;
   border-bottom: 1px dotted var(--border-color);
+}
+
+.sidebar-field > :last-child {
+  text-align: right;
+  word-break: break-all;
 }
 
 .sidebar-field:last-child {
