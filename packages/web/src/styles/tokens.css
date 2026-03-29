@@ -356,55 +356,37 @@ tr.selected td a {
   color: var(--selection-text);
 }
 
-/* ── Details/summary (native collapsible) ── */
-
-details {
-  border-bottom: 1px dashed var(--border-color);
-}
-
-details:last-child {
-  border-bottom: none;
-}
-
-details > .pr-row,
-details > summary {
-  margin-top: 0;
-}
+/* ── Group folds ── */
 
 .group-fold {
   padding: 0;
   margin-top: 0;
 }
 
-.group-fold > summary {
-  padding-left: 1ch;
-  padding-right: 1ch;
+.group-fold > .pr-row {
+  margin-top: 0;
+}
+
+.group-header {
+  cursor: pointer;
+  user-select: none;
+  padding: calc(var(--line-height) / 2) 1ch;
+  line-height: var(--line-height);
+  font-weight: 600;
+  margin-top: 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.group-header:hover {
+  background: var(--hover);
 }
 
 .group-fold.group-active {
   background: var(--group-active);
 }
 
-.group-fold.group-active > summary {
+.group-fold.group-active > .group-header {
   font-weight: 800;
-}
-
-summary {
-  cursor: pointer;
-  user-select: none;
-  padding: calc(var(--line-height) / 2) 0;
-  line-height: var(--line-height);
-  font-weight: 600;
-  list-style: none;
-  margin-top: 0;
-}
-
-summary::before {
-  content: "[+] ";
-}
-
-details[open] > summary::before {
-  content: "[-] ";
 }
 
 /* ── Spinner ── */

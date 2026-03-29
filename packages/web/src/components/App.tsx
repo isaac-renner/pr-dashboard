@@ -2,10 +2,11 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { displayOrderAtom, filteredPrsAtom } from "../atoms/derived.js";
+import { displayOrderAtom, filteredPrsAtom, groupedPrsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "../atoms/filters.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
-import { selectedUrlAtom, sidebarOpenAtom } from "../atoms/selection.js";
+import { selectedGroupAtom, selectedUrlAtom, sidebarOpenAtom } from "../atoms/selection.js";
+import { closedGroupsAtom, closeGroup, openGroup } from "../atoms/groups.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
 import { FilterBar } from "./FilterBar.js";
@@ -20,6 +21,8 @@ export function App() {
   const prs = useAtomValue(prsAtom);
   const filtered = useAtomValue(filteredPrsAtom);
   const displayOrder = useAtomValue(displayOrderAtom);
+  const grouped = useAtomValue(groupedPrsAtom);
+  const groupedNames = useMemo(() => new Set(grouped.keys()), [grouped]);
   const selectedUrl = useAtomValue(selectedUrlAtom);
   const setSelectedUrl = useAtomSet(selectedUrlAtom);
   const setGroup = useAtomSet(groupAtom);
@@ -30,6 +33,8 @@ export function App() {
   const setSelectedTickets = useAtomSet(selectedTicketsAtom);
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const setSidebarOpen = useAtomSet(sidebarOpenAtom);
+  const selectedGroup = useAtomValue(selectedGroupAtom);
+  const setClosedGroups = useAtomSet(closedGroupsAtom);
 
   // Current index of selected URL in display order
   const selectedIndex = useMemo(() => {
@@ -85,8 +90,9 @@ export function App() {
     { keys: "g s", label: "Stack", action: () => setGroup(Option.some("stack")), group: "Group by" },
     { keys: "g n", label: "None", action: () => setGroup(Option.some("none")), group: "Group by" },
 
-    { keys: "z o", label: "Open all folds", action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = true), group: "Folds" },
-    { keys: "z c", label: "Close all folds", action: () => document.querySelectorAll<HTMLDetailsElement>("details.group-fold").forEach((d) => d.open = false), group: "Folds" },
+    { keys: "z o", label: "Open group", action: () => { if (selectedGroup) openGroup(setClosedGroups, selectedGroup); }, group: "Folds" },
+    { keys: "z c", label: "Close group", action: () => { if (selectedGroup) { closeGroup(setClosedGroups, selectedGroup); setSelectedUrl(null); } }, group: "Folds" },
+    { keys: "z a", label: "Toggle all folds", action: () => setClosedGroups((current) => current.size > 0 ? new Set() : new Set(displayOrder.length > 0 ? Array.from(groupedNames) : [])), group: "Folds" },
 
     { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
@@ -115,7 +121,7 @@ export function App() {
         if (selectedUrl) { setSelectedUrl(null); return; }
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedUrl, setSidebarOpen, displayOrder, selectedIndex, selectedPR, helpOpen, actionsOpen, sidebarOpen, selectedUrl]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedUrl, setSidebarOpen, setClosedGroups, displayOrder, selectedIndex, selectedPR, selectedGroup, groupedNames, helpOpen, actionsOpen, sidebarOpen, selectedUrl]);
 
   const pending = useShortcuts(shortcuts);
 
