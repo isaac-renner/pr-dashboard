@@ -372,8 +372,13 @@ details > summary {
 }
 
 .group-fold {
-  padding: 0 1ch;
+  padding: 0;
   margin-top: 0;
+}
+
+.group-fold > summary {
+  padding-left: 1ch;
+  padding-right: 1ch;
 }
 
 .group-fold.group-active {
@@ -443,32 +448,28 @@ details[open] > summary::before {
 
 .pr-columns {
   --col: 3fr 1fr 1fr 1fr;
-  overflow: hidden;
 }
 
-.pr-grid-header {
-  display: grid;
-  grid-template-columns: var(--col);
-  gap: 0 1ch;
-  align-items: baseline;
-  padding: calc(var(--line-height) / 2) 1ch;
-  font-weight: 600;
-  border-bottom: var(--border) solid var(--border-color);
-}
-
-.pr-grid-header > * { margin-top: 0; }
-
+.pr-grid-header,
 .pr-row {
   display: grid;
   grid-template-columns: var(--col);
   gap: 0 1ch;
   align-items: baseline;
-  padding: calc(var(--line-height) / 2) 2ch;
-  margin: 0 -1ch;
+  padding: calc(var(--line-height) / 2) 1ch;
+}
+
+.pr-grid-header {
+  font-weight: 600;
+  border-bottom: var(--border) solid var(--border-color);
+}
+
+.pr-row {
   border-bottom: var(--border) dashed var(--border-color);
   cursor: pointer;
 }
 
+.pr-grid-header > *,
 .pr-row > *,
 .pr-row > *:first-child > * { margin-top: 0; }
 
@@ -487,7 +488,7 @@ details[open] > summary::before {
   .pr-row {
     grid-template-columns: 1fr;
     border: var(--border) solid var(--border-color);
-    margin: 0 0 var(--line-height) 0;
+    margin-bottom: var(--line-height);
   }
 }
 
@@ -523,7 +524,7 @@ details[open] > summary::before {
 }
 
 .sidebar-content {
-  padding: var(--line-height) 1ch;
+  padding: var(--line-height) 0;
 }
 
 .sidebar-content > * + * {
@@ -532,11 +533,12 @@ details[open] > summary::before {
 
 .sidebar-header {
   font-weight: 600;
+  padding: 0 1ch;
 }
 
 .sidebar-section {
   border-top: var(--border) solid var(--border-color);
-  padding-top: var(--line-height);
+  padding-top: calc(var(--line-height) / 2);
 }
 
 .sidebar-section > * + * {
@@ -547,13 +549,14 @@ details[open] > summary::before {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: calc(var(--line-height) / 2);
+  padding: 0 1ch;
+  margin-bottom: calc(var(--line-height) / 4);
 }
 
 .sidebar-field {
   display: flex;
   justify-content: space-between;
-  padding: calc(var(--line-height) / 4) 0;
+  padding: calc(var(--line-height) / 4) 1ch;
   border-bottom: 1px dotted var(--border-color);
 }
 
@@ -562,8 +565,8 @@ details[open] > summary::before {
 }
 
 .sidebar-comment {
-  padding: calc(var(--line-height) / 2) 0;
-  border-bottom: 1px dashed var(--border-color);
+  padding: calc(var(--line-height) / 2) 1ch;
+  border-bottom: var(--border) dashed var(--border-color);
 }
 
 .sidebar-comment:last-child {

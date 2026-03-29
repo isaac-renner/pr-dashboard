@@ -86,7 +86,6 @@ export function PRList() {
         <div>Review</div>
         <div>Pipeline</div>
         <div>Conflicts</div>
-        <div>Comments</div>
       </div>
       {Array.from(grouped.entries()).map(([groupName, groupPrs]) => (
         <GroupSection
