@@ -24,16 +24,22 @@ import { enrichGraphQLNode, type GQLNode } from "./Enrichment.js";
 // Service interface
 // -----------------------------------------------------------------------------
 
+export interface FetchResult {
+  /** PRs authored by or assigned to the current user */
+  readonly myPRs: ReadonlyArray<PR>;
+  /** PRs where review is requested from the current user */
+  readonly reviewRequested: ReadonlyArray<PR>;
+}
+
 export interface GitHubClientShape {
   /**
-   * Fetch all open PRs (authored + assigned). Deduplicates by URL.
-   * Returns enriched PR models ready for the PRStore.
+   * Fetch all open PRs — authored/assigned + review-requested.
+   * Returns both lists separately, each deduplicated.
    */
-  readonly fetchAllOpenPRs: Effect.Effect<ReadonlyArray<PR>, GraphQLRequestError>;
+  readonly fetchAllOpenPRs: Effect.Effect<FetchResult, GraphQLRequestError>;
 
   /**
    * Re-fetch a single PR by owner/repo/number.
-   * Used after webhook events to get fresh mergeable/check data.
    */
   readonly fetchSinglePR: (
     owner: string,
@@ -41,7 +47,6 @@ export interface GitHubClientShape {
     number: number,
   ) => Effect.Effect<PR | null, GraphQLRequestError>;
 
-  /** The current user (for review state / unresolved thread filtering) */
   readonly currentUser: string;
 }
 
@@ -81,20 +86,25 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
 
         const authored = data.authored.nodes ?? [];
         const assigned = data.assigned.nodes ?? [];
+        const reviewReq = data.reviewRequested.nodes ?? [];
 
-        // Deduplicate by URL, skip non-PR search results
-        const seen = new Set<string>();
-        const prs: Array<PR> = [];
-
-        for (const node of [...authored, ...assigned]) {
-          if (!node || !("number" in node)) continue;
-          const fragment = node as PrFieldsFragment;
-          if (seen.has(fragment.url)) continue;
-          seen.add(fragment.url);
-          prs.push(enrichGraphQLNode(fragmentToGQLNode(fragment), currentUser));
+        function dedup(nodes: ReadonlyArray<unknown>): Array<PR> {
+          const seen = new Set<string>();
+          const result: Array<PR> = [];
+          for (const node of nodes) {
+            if (!node || typeof node !== "object" || !("number" in node)) continue;
+            const fragment = node as PrFieldsFragment;
+            if (seen.has(fragment.url)) continue;
+            seen.add(fragment.url);
+            result.push(enrichGraphQLNode(fragmentToGQLNode(fragment), currentUser));
+          }
+          return result;
         }
 
-        return prs;
+        return {
+          myPRs: dedup([...authored, ...assigned]),
+          reviewRequested: dedup(reviewReq),
+        };
       }),
 
       fetchSinglePR: (owner, repo, number) =>

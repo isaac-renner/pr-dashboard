@@ -91,6 +91,15 @@ export const BackfillOpenPRs = graphql(`
         ...PRFields
       }
     }
+    reviewRequested: search(
+      query: "review-requested:@me state:open type:pr"
+      type: ISSUE
+      first: 100
+    ) {
+      nodes {
+        ...PRFields
+      }
+    }
   }
 `);
 

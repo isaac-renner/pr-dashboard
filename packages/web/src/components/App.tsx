@@ -13,6 +13,7 @@ import { ActionsModal } from "./ActionsModal.js";
 import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
 import { PRList } from "./PRList.js";
+import { ReviewQueue } from "./ReviewQueue.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
 import { Sidebar } from "./Sidebar.js";
 
@@ -178,6 +179,7 @@ export function App() {
             <div className="flex"><div className="spinner" /> Loading...</div>
           )}
           {error && <div>Error: {error}</div>}
+          <ReviewQueue />
           {prs.length > 0 && <PRList />}
           {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
         </div>

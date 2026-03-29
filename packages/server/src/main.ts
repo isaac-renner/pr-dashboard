@@ -36,6 +36,7 @@ const runtime = ManagedRuntime.make(MainLayer);
 // Plain mutable state — these are only touched by the refresh/response
 // effects which are serialized through the runtime.
 let sessionCache = new Map<string, ReadonlyArray<SessionRef>>();
+let reviewRequestedCache: PR[] = [];
 let lastRefreshed: string | null = null;
 let refreshing = false;
 
@@ -53,15 +54,17 @@ const refreshCache = Effect.gen(function*() {
     const opencode = yield* Effect.service(OpenCodeClient);
 
     // Fetch PRs — on failure, keep the existing store contents
-    const prs = yield* github.fetchAllOpenPRs.pipe(
+    const result = yield* github.fetchAllOpenPRs.pipe(
       Effect.catch((err) =>
         Effect.gen(function*() {
           yield* Effect.logWarning(`GitHub fetch failed: ${err.message}`);
-          return yield* prStore.getAll;
+          const existing = yield* prStore.getAll;
+          return { myPRs: existing, reviewRequested: reviewRequestedCache };
         })
       ),
     );
-    yield* prStore.replaceAll(prs);
+    yield* prStore.replaceAll(result.myPRs);
+    reviewRequestedCache = [...result.reviewRequested];
 
     // Correlate sessions — on failure, keep the old cache
     if (opencode.enabled) {
@@ -90,11 +93,8 @@ const refreshCache = Effect.gen(function*() {
 // Build API response
 // -----------------------------------------------------------------------------
 
-const buildPrsResponse = Effect.gen(function*() {
-  const prStore = yield* Effect.service(PRStore);
-  const allPrs = yield* prStore.getAll;
-
-  const prs = allPrs
+function enrichWithSessions(prs: ReadonlyArray<PR>) {
+  return prs
     .filter((pr: PR) => pr.state === "OPEN")
     .map((pr: PR) => ({
       ...pr,
@@ -103,8 +103,17 @@ const buildPrsResponse = Effect.gen(function*() {
     .sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
+}
 
-  return { prs, lastRefreshed };
+const buildPrsResponse = Effect.gen(function*() {
+  const prStore = yield* Effect.service(PRStore);
+  const allPrs = yield* prStore.getAll;
+
+  return {
+    prs: enrichWithSessions(allPrs),
+    reviewRequested: enrichWithSessions(reviewRequestedCache),
+    lastRefreshed,
+  };
 });
 
 // -----------------------------------------------------------------------------

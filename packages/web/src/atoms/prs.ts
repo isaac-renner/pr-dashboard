@@ -24,6 +24,7 @@ class RefreshError extends Data.TaggedError("RefreshError")<{
 // --- API response shape ---
 interface PrsApiResponse {
   prs: PR[];
+  reviewRequested: PR[];
   lastRefreshed: string | null;
 }
 
@@ -51,10 +52,10 @@ export const prsAtom = Atom.map(prsResponseAtom, (result) => {
   return [] as PR[];
 });
 
-// --- Derived: last refreshed timestamp ---
-export const lastRefreshedAtom = Atom.map(prsResponseAtom, (result) => {
-  if (result._tag === "Success") return result.value.lastRefreshed;
-  return null as string | null;
+// --- Derived: review-requested PRs ---
+export const reviewRequestedAtom = Atom.map(prsResponseAtom, (result) => {
+  if (result._tag === "Success") return result.value.reviewRequested;
+  return [] as PR[];
 });
 
 // --- Refresh: POST /api/refresh then re-fetch ---

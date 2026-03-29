@@ -577,6 +577,24 @@ tr.selected td a {
   margin-top: calc(var(--line-height) / 4);
 }
 
+/* ── Review queue ── */
+
+.review-queue-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2ch;
+  padding: calc(var(--line-height) / 2) 1ch;
+  border-bottom: var(--border) dashed var(--border-color);
+  cursor: pointer;
+}
+
+.review-queue-row:last-child { border-bottom: none; }
+.review-queue-row:hover { background: var(--hover); }
+
+.review-queue-row > *,
+.review-queue-row > *:first-child > * { margin-top: 0; }
+
 /* ── Filter bar ── */
 
 .filter-bar {
