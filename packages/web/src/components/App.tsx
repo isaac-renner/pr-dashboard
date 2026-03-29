@@ -132,14 +132,7 @@ export function App() {
             <div className="flex"><div className="spinner" /> Loading...</div>
           )}
           {error && <div>Error: {error}</div>}
-          {prs.length > 0 && (
-            <>
-              <div className="muted">
-                {filtered.length} PR{filtered.length === 1 ? "" : "s"}
-              </div>
-              <PRList />
-            </>
-          )}
+          {prs.length > 0 && <PRList />}
           {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
         </div>
         <Sidebar />

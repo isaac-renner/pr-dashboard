@@ -49,7 +49,7 @@ export function FloatingBar({ pending, shortcuts, selectedIndex }: FloatingBarPr
 
   return (
     <div className="floating-bar">
-      <div className="flex muted" style={{ flex: 1 }}>
+      <div className="flex muted floating-bar-shortcuts" style={{ flex: 1 }}>
         <span><kbd>j</kbd><kbd>k</kbd> nav</span>
         <span><kbd>o</kbd> open</span>
         <span><kbd>p</kbd> pipeline</span>

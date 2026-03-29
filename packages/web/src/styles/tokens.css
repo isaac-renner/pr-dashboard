@@ -522,7 +522,7 @@ details[open] > summary::before {
   position: sticky;
   top: calc(var(--line-height) / 2);
   max-height: calc(100vh - var(--line-height) * 3);
-  margin-top: calc(var(--line-height) * 2 + var(--border));
+  margin-top: 0;
   margin-left: calc(var(--border) * -1);
 }
 
@@ -586,6 +586,15 @@ details[open] > summary::before {
   margin-top: calc(var(--line-height) / 4);
 }
 
+/* ── Filter bar ── */
+
+.filter-bar {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 1ch;
+  align-items: end;
+}
+
 /* ── Shortcut help grid ── */
 
 .shortcut-grid {
@@ -637,6 +646,31 @@ details[open] > summary::before {
 
 @media (max-width: 720px) {
   body {
-    padding: var(--line-height) 1ch;
+    padding: calc(var(--line-height) / 2) 1ch calc(var(--line-height) * 3) 1ch;
+  }
+
+  /* Filter bar stacks vertically */
+  .filter-bar {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Sidebar goes full width below content */
+  .app-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+    min-height: auto;
+    border-left: none;
+    border-right: none;
+    border-top: var(--border) solid var(--border-color);
+    margin: 0;
+  }
+
+  /* Hide shortcut hints on mobile */
+  .floating-bar-shortcuts {
+    display: none;
   }
 }

@@ -52,7 +52,7 @@ export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipe
 
   return (
     <>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto auto", gap: "1ch", alignItems: "end" }}>
+      <div className="filter-bar">
         <input
           ref={filterInputRef}
           type="text"
