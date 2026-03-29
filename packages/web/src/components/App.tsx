@@ -14,7 +14,6 @@ import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
 import { viewModeAtom } from "../atoms/view.js";
 import { PRList } from "./PRList.js";
-import { ReviewQueue } from "./ReviewQueue.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
 import { Sidebar } from "./Sidebar.js";
 
@@ -103,13 +102,13 @@ export function App() {
     {
       keys: "1",
       label: "My PRs",
-      action: () => { setViewMode("my-prs"); setSelectedNavIndex(-1); },
+      action: () => { setViewMode("my-prs"); setSelectedNavIndex(-1); setClosedGroups(() => new Set()); },
       group: "Views",
     },
     {
       keys: "2",
       label: "Reviews",
-      action: () => { setViewMode("reviews"); setSelectedNavIndex(-1); },
+      action: () => { setViewMode("reviews"); setSelectedNavIndex(-1); setClosedGroups(() => new Set()); },
       group: "Views",
     },
 
@@ -195,8 +194,7 @@ export function App() {
             <div className="flex"><div className="spinner" /> Loading...</div>
           )}
           {error && <div>Error: {error}</div>}
-          {viewMode === "reviews" ? <ReviewQueue /> : prs.length > 0 ? <PRList /> : null}
-          {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
+          {!loading && !error && <PRList />}
         </div>
         <Sidebar />
       </div>

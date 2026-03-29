@@ -7,20 +7,27 @@ import { extractRepos, extractTickets, filterPRs, groupByRepo, groupByStack, gro
 import type { NavItem, PR } from "../lib/types.js";
 import { filtersAtom } from "./filters.js";
 import { closedGroupsAtom } from "./groups.js";
-import { prsAtom } from "./prs.js";
+import { prsAtom, reviewRequestedAtom } from "./prs.js";
+import { viewModeAtom } from "./view.js";
+
+/** The active source list — switches based on view mode */
+export const activeListAtom: Atom.Atom<PR[]> = Atom.make((get) => {
+  const mode = get(viewModeAtom);
+  return mode === "reviews" ? get(reviewRequestedAtom) : get(prsAtom);
+});
 
 export const availableReposAtom: Atom.Atom<string[]> = Atom.make((get) => {
-  const prs = get(prsAtom);
+  const prs = get(activeListAtom);
   return extractRepos(prs);
 });
 
 export const availableTicketsAtom: Atom.Atom<string[]> = Atom.make((get) => {
-  const prs = get(prsAtom);
+  const prs = get(activeListAtom);
   return extractTickets(prs);
 });
 
 export const filteredPrsAtom: Atom.Atom<PR[]> = Atom.make((get) => {
-  const prs = get(prsAtom);
+  const prs = get(activeListAtom);
   const filters = get(filtersAtom);
   return filterPRs(prs, filters);
 });
