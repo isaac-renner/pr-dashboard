@@ -577,6 +577,16 @@ tr.selected td a {
   margin-top: calc(var(--line-height) / 4);
 }
 
+/* ── Status bar view label ── */
+
+.status-bar-view {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+  padding: 0 1ch;
+  font-weight: 600;
+  margin-left: 1ch;
+}
+
 /* ── Review queue ── */
 
 .review-queue-row {

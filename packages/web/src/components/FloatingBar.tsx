@@ -2,6 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import React from "react";
 import { navItemsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
+import { viewModeAtom } from "../atoms/view.js";
 import { selectedNavIndexAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 
@@ -12,6 +13,7 @@ interface FloatingBarProps {
 
 export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
   const filters = useAtomValue(filtersAtom);
+  const viewMode = useAtomValue(viewModeAtom);
   const navItems = useAtomValue(navItemsAtom);
   const selectedNavIndex = useAtomValue(selectedNavIndexAtom);
 
@@ -22,6 +24,7 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
 
   const prCount = navItems.filter((i) => i._tag === "pr").length;
   const position = selectedNavIndex >= 0 ? `${selectedNavIndex + 1}/${navItems.length}` : `${prCount} PRs`;
+  const viewLabel = viewMode === "reviews" ? "REVIEWS" : "MY PRS";
 
   if (pending) {
     const completions = shortcuts.filter((s) => {
@@ -42,7 +45,8 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
             );
           })}
         </div>
-        <span>{groupLabel}</span>
+        <span className="muted">{groupLabel}</span>
+        <span className="status-bar-view">{viewLabel}</span>
       </div>
     );
   }
@@ -58,7 +62,8 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
         <span><kbd>?</kbd> help</span>
       </div>
       <span className="muted">{position}</span>
-      <span style={{ marginLeft: "1ch" }}>{groupLabel}</span>
+      <span className="muted" style={{ marginLeft: "1ch" }}>{groupLabel}</span>
+      <span className="status-bar-view">{viewLabel}</span>
     </div>
   );
 }

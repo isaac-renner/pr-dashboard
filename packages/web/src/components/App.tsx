@@ -12,6 +12,7 @@ import { useShortcuts } from "../lib/useShortcuts.js";
 import { ActionsModal } from "./ActionsModal.js";
 import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
+import { viewModeAtom } from "../atoms/view.js";
 import { PRList } from "./PRList.js";
 import { ReviewQueue } from "./ReviewQueue.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
@@ -35,6 +36,8 @@ export function App() {
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const setSidebarOpen = useAtomSet(sidebarOpenAtom);
   const setClosedGroups = useAtomSet(closedGroupsAtom);
+  const viewMode = useAtomValue(viewModeAtom);
+  const setViewMode = useAtomSet(viewModeAtom);
   const grouped = useAtomValue(groupedPrsAtom);
   const groupedNames = useMemo(() => new Set(grouped.keys()), [grouped]);
 
@@ -96,6 +99,19 @@ export function App() {
       group: "Navigation",
     },
     { keys: "i", label: "Toggle sidebar", action: () => setSidebarOpen((o) => !o), group: "Navigation" },
+
+    {
+      keys: "1",
+      label: "My PRs",
+      action: () => { setViewMode("my-prs"); setSelectedNavIndex(-1); },
+      group: "Views",
+    },
+    {
+      keys: "2",
+      label: "Reviews",
+      action: () => { setViewMode("reviews"); setSelectedNavIndex(-1); },
+      group: "Views",
+    },
 
     { keys: "g r", label: "Repo", action: () => setGroup(Option.some("repo")), group: "Group by" },
     { keys: "g k", label: "Ticket", action: () => setGroup(Option.some("ticket")), group: "Group by" },
@@ -162,7 +178,7 @@ export function App() {
         if (selectedNavIndex >= 0) { setSelectedNavIndex(-1); return; }
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedNavIndex, setSidebarOpen, setClosedGroups, navItems, selectedNavIndex, selectedPR, selectedGroupName, selectedItem, groupedNames, helpOpen, actionsOpen, sidebarOpen]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedNavIndex, setSidebarOpen, setClosedGroups, setViewMode, navItems, selectedNavIndex, selectedPR, selectedGroupName, selectedItem, groupedNames, helpOpen, actionsOpen, sidebarOpen]);
 
   const pending = useShortcuts(shortcuts);
 
@@ -179,8 +195,7 @@ export function App() {
             <div className="flex"><div className="spinner" /> Loading...</div>
           )}
           {error && <div>Error: {error}</div>}
-          <ReviewQueue />
-          {prs.length > 0 && <PRList />}
+          {viewMode === "reviews" ? <ReviewQueue /> : prs.length > 0 ? <PRList /> : null}
           {!loading && !error && prs.length === 0 && <div className="muted">No PRs found</div>}
         </div>
         <Sidebar />
