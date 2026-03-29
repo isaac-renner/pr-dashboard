@@ -90,9 +90,9 @@ export function App() {
     { keys: "g s", label: "Stack", action: () => setGroup(Option.some("stack")), group: "Group by" },
     { keys: "g n", label: "None", action: () => setGroup(Option.some("none")), group: "Group by" },
 
-    { keys: "z o", label: "Open group", action: () => { if (selectedGroup) openGroup(setClosedGroups, selectedGroup); }, group: "Folds" },
-    { keys: "z c", label: "Close group", action: () => { if (selectedGroup) { closeGroup(setClosedGroups, selectedGroup); setSelectedUrl(null); } }, group: "Folds" },
-    { keys: "z a", label: "Toggle all folds", action: () => setClosedGroups((current) => current.size > 0 ? new Set() : new Set(displayOrder.length > 0 ? Array.from(groupedNames) : [])), group: "Folds" },
+    { keys: "z o", label: "Open all groups", action: () => setClosedGroups(() => new Set()), group: "Folds" },
+    { keys: "z c", label: "Close current group", action: () => { if (selectedGroup) { closeGroup(setClosedGroups, selectedGroup); setSelectedUrl(null); } }, group: "Folds" },
+    { keys: "z a", label: "Close all groups", action: () => { setClosedGroups(() => new Set(groupedNames)); setSelectedUrl(null); }, group: "Folds" },
 
     { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
