@@ -164,9 +164,20 @@ async function main() {
             headers: viteRes.headers,
           });
         } catch {
-          // Vite not running
+          // Vite not running — fall through to static serving
         }
       }
+
+      // Production: serve Vite build output
+      const STATIC_DIR = process.env.STATIC_DIR
+        ?? new URL("../../web/dist", import.meta.url).pathname;
+      const filePath = url.pathname === "/" ? "/index.html" : url.pathname;
+      const file = Bun.file(STATIC_DIR + filePath);
+      if (await file.exists()) return new Response(file);
+
+      // SPA fallback: serve index.html for non-file routes
+      const index = Bun.file(STATIC_DIR + "/index.html");
+      if (await index.exists()) return new Response(index);
 
       return new Response("Not found", { status: 404 });
     },

@@ -32,18 +32,31 @@
         {
           default = pkgs.stdenv.mkDerivation {
             pname = "pr-dashboard";
-            version = "0.1.0";
+            version = "0.2.0";
             src = ./.;
-            nativeBuildInputs = [ pkgs.makeWrapper ];
+            nativeBuildInputs = [ pkgs.makeWrapper pkgs.bun ];
+
+            # Build the Vite frontend
+            buildPhase = ''
+              export HOME=$TMPDIR
+              bun install --frozen-lockfile 2>/dev/null || bun install
+              cd packages/web && bunx vite build && cd ../..
+            '';
+
             installPhase = let
               entrypoint = pkgs.writeShellScript "pr-dashboard-entrypoint" ''
                 if [ -n "''${GH_TOKEN_FILE:-}" ] && [ -f "$GH_TOKEN_FILE" ]; then
                   export GH_TOKEN=$(cat "$GH_TOKEN_FILE")
                 fi
+                if [ -n "''${GITHUB_TOKEN_FILE:-}" ] && [ -f "$GITHUB_TOKEN_FILE" ]; then
+                  export GITHUB_TOKEN=$(cat "$GITHUB_TOKEN_FILE")
+                fi
                 exec "$@"
               '';
             in ''
               mkdir -p $out/share/pr-dashboard
+
+              # Copy server source + shared packages
               cp -r packages $out/share/pr-dashboard/
               cp -r node_modules $out/share/pr-dashboard/ 2>/dev/null || true
               cp package.json tsconfig.base.json $out/share/pr-dashboard/
@@ -52,7 +65,9 @@
               makeWrapper ${entrypoint} $out/bin/pr-dashboard \
                 --add-flags "${pkgs.bun}/bin/bun run $out/share/pr-dashboard/packages/server/src/main.ts" \
                 --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.gh ]} \
-                --set-default OPENCODE_URL "http://mentat:9741"
+                --set-default OPENCODE_URL "http://mentat:9741" \
+                --set-default NODE_ENV "production" \
+                --set-default STATIC_DIR "$out/share/pr-dashboard/packages/web/dist"
             '';
           };
         }
