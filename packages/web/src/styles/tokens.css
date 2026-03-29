@@ -515,11 +515,12 @@ details[open] > summary::before {
   width: 40ch;
   flex-shrink: 0;
   border-left: var(--border) solid var(--border-color);
+  border-right: var(--border) solid var(--border-color);
   overflow-y: auto;
   position: sticky;
   top: calc(var(--line-height) / 2);
   max-height: calc(100vh - var(--line-height) * 3);
-  margin-top: 0;
+  margin-top: calc(var(--line-height) * 2 + var(--border));
   margin-left: calc(var(--border) * -1);
 }
 
