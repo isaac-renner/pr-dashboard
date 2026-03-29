@@ -112,6 +112,19 @@ export function App() {
       group: "Views",
     },
 
+    {
+      keys: "g g",
+      label: "Go to top",
+      action: () => { setSelectedNavIndex(navItems.length > 0 ? 0 : -1); window.scrollTo({ top: 0, behavior: "smooth" }); },
+      group: "Navigation",
+    },
+    {
+      keys: "Shift+g",
+      label: "Go to bottom",
+      action: () => { setSelectedNavIndex(navItems.length > 0 ? navItems.length - 1 : -1); },
+      group: "Navigation",
+    },
+
     { keys: "g r", label: "Repo", action: () => setGroup(Option.some("repo")), group: "Group by" },
     { keys: "g k", label: "Ticket", action: () => setGroup(Option.some("ticket")), group: "Group by" },
     { keys: "g s", label: "Stack", action: () => setGroup(Option.some("stack")), group: "Group by" },
