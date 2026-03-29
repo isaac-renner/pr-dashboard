@@ -538,6 +538,7 @@ tr.selected td a {
   border-left: var(--border) solid var(--border-color);
   border-right: var(--border) solid var(--border-color);
   border-top: var(--border) solid var(--border-color);
+  border-bottom: var(--border) solid var(--border-color);
   min-height: calc(100vh - var(--line-height) * 3);
   overflow-y: auto;
   position: sticky;
