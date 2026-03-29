@@ -13,7 +13,7 @@ import { OpenCodeClient, OpenCodeClientLive } from "./services/OpenCodeClient.js
 import { PRStore, PRStoreLive } from "./services/PRStore.js";
 
 const PORT = Number(process.env.PORT ?? 3333);
-const REFRESH_INTERVAL_MS = 2 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes — gentler on GitHub rate limits
 
 // -----------------------------------------------------------------------------
 // Layer composition
