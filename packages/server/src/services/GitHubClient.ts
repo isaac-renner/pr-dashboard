@@ -105,7 +105,7 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
           myPRs: dedup([...authored, ...assigned]),
           reviewRequested: dedup(reviewReq),
         };
-      }),
+      }).pipe(Effect.withSpan("github.fetchAllOpenPRs")),
 
       fetchSinglePR: (owner, repo, number) =>
         Effect.gen(function*() {
@@ -118,7 +118,7 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
           const node = data.repository?.pullRequest;
           if (!node) return null;
           return enrichGraphQLNode(fragmentToGQLNode(node), currentUser);
-        }),
+        }).pipe(Effect.withSpan("github.fetchSinglePR")),
     };
   }),
 );

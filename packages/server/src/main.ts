@@ -87,7 +87,7 @@ const refreshCache = Effect.gen(function*() {
   } finally {
     refreshing = false;
   }
-});
+}).pipe(Effect.withSpan("server.refreshCache"));
 
 // -----------------------------------------------------------------------------
 // Build API response
@@ -114,7 +114,7 @@ const buildPrsResponse = Effect.gen(function*() {
     reviewRequested: enrichWithSessions(reviewRequestedCache),
     lastRefreshed,
   };
-});
+}).pipe(Effect.withSpan("server.buildPrsResponse"));
 
 // -----------------------------------------------------------------------------
 // Startup

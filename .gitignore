@@ -3,3 +3,4 @@ dist/
 *.tsbuildinfo
 .vite/
 .effect-ref/
+.otel/

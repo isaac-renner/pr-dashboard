@@ -113,7 +113,7 @@ export const GitHubGraphQLClientLive = Layer.effect(GitHubGraphQLClient)(
           }
 
           return json.data;
-        }),
+        }).pipe(Effect.withSpan("graphql.execute")),
     };
   }),
 );
