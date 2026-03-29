@@ -57,7 +57,6 @@ export function getReviewLabel(pr: PR): ReviewLabel {
   if (pr.isDraft && pr.reviewState === "PENDING") return "Draft";
   if (pr.reviewState === "APPROVED") return "Approved";
   if (pr.reviewState === "CHANGES_REQUESTED") return "Changes Requested";
-  // Has unresolved threads but no formal review = commented
   if (pr.unresolvedCount > 0 && pr.reviewState === "PENDING") return "Commented";
   return "Unreviewed";
 }
@@ -72,3 +71,9 @@ export interface Filters {
   tickets: ReadonlyArray<string>;
   group: "ticket" | "repo" | "stack" | "none";
 }
+
+// --- Navigation items (j/k walks these) ---
+
+export type NavItem =
+  | { readonly _tag: "pr"; readonly pr: PR }
+  | { readonly _tag: "group"; readonly name: string; readonly closed: boolean };

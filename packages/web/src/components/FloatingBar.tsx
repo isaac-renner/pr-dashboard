@@ -1,23 +1,27 @@
 import { useAtomValue } from "@effect/atom-react";
 import React from "react";
-import { displayOrderAtom } from "../atoms/derived.js";
+import { navItemsAtom } from "../atoms/derived.js";
 import { filtersAtom } from "../atoms/filters.js";
+import { selectedNavIndexAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 
 interface FloatingBarProps {
   readonly pending: string | null;
   readonly shortcuts: ReadonlyArray<ShortcutDef>;
-  readonly selectedIndex: number;
 }
 
-export function FloatingBar({ pending, shortcuts, selectedIndex }: FloatingBarProps) {
+export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
   const filters = useAtomValue(filtersAtom);
-  const displayOrder = useAtomValue(displayOrderAtom);
+  const navItems = useAtomValue(navItemsAtom);
+  const selectedNavIndex = useAtomValue(selectedNavIndexAtom);
 
   const groupLabel = filters.group === "stack" ? "STACK"
     : filters.group === "repo" ? "REPO"
     : filters.group === "none" ? "ALL"
     : "TICKET";
+
+  const prCount = navItems.filter((i) => i._tag === "pr").length;
+  const position = selectedNavIndex >= 0 ? `${selectedNavIndex + 1}/${navItems.length}` : `${prCount} PRs`;
 
   if (pending) {
     const completions = shortcuts.filter((s) => {
@@ -27,7 +31,7 @@ export function FloatingBar({ pending, shortcuts, selectedIndex }: FloatingBarPr
 
     return (
       <div className="floating-bar">
-        <div className="flex" style={{ flex: 1 }}>
+        <div className="flex floating-bar-shortcuts" style={{ flex: 1 }}>
           <span>{pending} →</span>
           {completions.map((s) => {
             const secondKey = s.keys.split(" ")[1]!;
@@ -42,10 +46,6 @@ export function FloatingBar({ pending, shortcuts, selectedIndex }: FloatingBarPr
       </div>
     );
   }
-
-  const position = selectedIndex >= 0
-    ? `${selectedIndex + 1}/${displayOrder.length}`
-    : `${displayOrder.length} PRs`;
 
   return (
     <div className="floating-bar">

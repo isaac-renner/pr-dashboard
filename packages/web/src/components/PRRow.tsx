@@ -1,4 +1,4 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react";
+import { useAtomValue } from "@effect/atom-react";
 import React, { useEffect, useRef } from "react";
 import { selectedUrlAtom } from "../atoms/selection.js";
 import { timeAgo } from "../lib/format.js";
@@ -6,11 +6,11 @@ import { getReviewLabel, type PR } from "../lib/types.js";
 
 interface PRRowProps {
   pr: PR;
+  onClick: () => void;
 }
 
-export function PRRow({ pr }: PRRowProps) {
+export function PRRow({ pr, onClick }: PRRowProps) {
   const selectedUrl = useAtomValue(selectedUrlAtom);
-  const setSelectedUrl = useAtomSet(selectedUrlAtom);
   const isSelected = pr.url === selectedUrl;
   const rowRef = useRef<HTMLDivElement>(null);
 
@@ -36,9 +36,9 @@ export function PRRow({ pr }: PRRowProps) {
     : "Unknown";
 
   return (
-    <div ref={rowRef} className={`pr-row${isSelected ? " selected" : ""}`} onClick={() => setSelectedUrl(pr.url)}>
+    <div ref={rowRef} className={`pr-row${isSelected ? " selected" : ""}`} onClick={onClick}>
       <div>
-        <a href={pr.url} target="_blank" rel="noreferrer">
+        <a href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
           #{pr.number} {pr.title}
         </a>
         <div className="muted">
@@ -50,7 +50,7 @@ export function PRRow({ pr }: PRRowProps) {
 
       <div>
         {pr.pipelineUrl
-          ? <a href={pr.pipelineUrl} target="_blank" rel="noreferrer">{pipelineLabel}</a>
+          ? <a href={pr.pipelineUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{pipelineLabel}</a>
           : pipelineLabel}
       </div>
 

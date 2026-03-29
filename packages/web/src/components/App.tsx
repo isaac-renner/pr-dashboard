@@ -2,29 +2,29 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { displayOrderAtom, filteredPrsAtom, groupedPrsAtom } from "../atoms/derived.js";
+import { filteredPrsAtom, groupedPrsAtom, navItemsAtom } from "../atoms/derived.js";
 import { groupAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "../atoms/filters.js";
+import { closedGroupsAtom, closeGroup, toggleGroup } from "../atoms/groups.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
-import { selectedGroupAtom, selectedUrlAtom, sidebarOpenAtom } from "../atoms/selection.js";
-import { closedGroupsAtom, closeGroup, openGroup } from "../atoms/groups.js";
+import { selectedGroupNameAtom, selectedNavIndexAtom, selectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import type { ShortcutDef } from "../lib/shortcuts.js";
 import { useShortcuts } from "../lib/useShortcuts.js";
+import { ActionsModal } from "./ActionsModal.js";
 import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
 import { PRList } from "./PRList.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
-import { ActionsModal } from "./ActionsModal.js";
 import { Sidebar } from "./Sidebar.js";
 
 export function App() {
   const response = useAtomValue(prsResponseAtom);
   const prs = useAtomValue(prsAtom);
   const filtered = useAtomValue(filteredPrsAtom);
-  const displayOrder = useAtomValue(displayOrderAtom);
-  const grouped = useAtomValue(groupedPrsAtom);
-  const groupedNames = useMemo(() => new Set(grouped.keys()), [grouped]);
-  const selectedUrl = useAtomValue(selectedUrlAtom);
-  const setSelectedUrl = useAtomSet(selectedUrlAtom);
+  const navItems = useAtomValue(navItemsAtom);
+  const selectedNavIndex = useAtomValue(selectedNavIndexAtom);
+  const setSelectedNavIndex = useAtomSet(selectedNavIndexAtom);
+  const selectedPR = useAtomValue(selectedPRAtom);
+  const selectedGroupName = useAtomValue(selectedGroupNameAtom);
   const setGroup = useAtomSet(groupAtom);
   const setSearch = useAtomSet(searchAtom);
   const setSelectedRepos = useAtomSet(selectedReposAtom);
@@ -33,28 +33,21 @@ export function App() {
   const setSelectedTickets = useAtomSet(selectedTicketsAtom);
   const sidebarOpen = useAtomValue(sidebarOpenAtom);
   const setSidebarOpen = useAtomSet(sidebarOpenAtom);
-  const selectedGroup = useAtomValue(selectedGroupAtom);
   const setClosedGroups = useAtomSet(closedGroupsAtom);
+  const grouped = useAtomValue(groupedPrsAtom);
+  const groupedNames = useMemo(() => new Set(grouped.keys()), [grouped]);
 
-  // Current index of selected URL in display order
-  const selectedIndex = useMemo(() => {
-    if (!selectedUrl) return -1;
-    return displayOrder.findIndex((pr) => pr.url === selectedUrl);
-  }, [selectedUrl, displayOrder]);
-
-  // If selected PR disappears from filtered list, clear selection
+  // Clamp selection when navItems changes
   useEffect(() => {
-    if (selectedUrl && selectedIndex === -1) {
-      setSelectedUrl(null);
+    if (selectedNavIndex >= navItems.length) {
+      setSelectedNavIndex(Math.max(navItems.length - 1, -1));
     }
-  }, [selectedUrl, selectedIndex, setSelectedUrl]);
+  }, [navItems.length, selectedNavIndex, setSelectedNavIndex]);
 
-  // Close sidebar when no PR is selected
+  // Close sidebar when nothing selected
   useEffect(() => {
-    if (!selectedUrl && sidebarOpen) setSidebarOpen(false);
-  }, [selectedUrl, sidebarOpen, setSidebarOpen]);
-
-  const selectedPR = selectedIndex >= 0 ? displayOrder[selectedIndex] ?? null : null;
+    if (!selectedPR && sidebarOpen) setSidebarOpen(false);
+  }, [selectedPR, sidebarOpen, setSidebarOpen]);
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -66,33 +59,83 @@ export function App() {
 
   function moveSelection(delta: number) {
     if (actionsOpen || helpOpen) return;
-    if (displayOrder.length === 0) return;
-    if (delta < 0 && (selectedIndex === 0 || selectedIndex === -1)) {
-      setSelectedUrl(null);
+    if (navItems.length === 0) return;
+    if (delta < 0 && (selectedNavIndex <= 0)) {
+      setSelectedNavIndex(-1);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    const next = selectedIndex === -1
-      ? (delta > 0 ? 0 : displayOrder.length - 1)
-      : Math.max(0, Math.min(selectedIndex + delta, displayOrder.length - 1));
-    setSelectedUrl(displayOrder[next]!.url);
+    const next = selectedNavIndex === -1
+      ? (delta > 0 ? 0 : navItems.length - 1)
+      : Math.max(0, Math.min(selectedNavIndex + delta, navItems.length - 1));
+    setSelectedNavIndex(next);
   }
+
+  const selectedItem = selectedNavIndex >= 0 ? navItems[selectedNavIndex] ?? null : null;
 
   const shortcuts: ReadonlyArray<ShortcutDef> = useMemo(() => [
     { keys: "j", label: "Move down", action: () => moveSelection(1), group: "Navigation" },
-    { keys: "k", label: "Move up / focus search", action: () => moveSelection(-1), group: "Navigation" },
-    { keys: "o", label: "Open PR", action: () => { if (selectedPR) window.open(selectedPR.url, "_blank"); }, group: "Navigation" },
-    { keys: "p", label: "Open pipeline", action: () => { if (selectedPR?.pipelineUrl) window.open(selectedPR.pipelineUrl, "_blank"); }, group: "Navigation" },
-    { keys: "a", label: "Actions", action: () => { if (selectedPR) setActionsOpen(true); }, group: "Navigation" },
+    { keys: "k", label: "Move up", action: () => moveSelection(-1), group: "Navigation" },
+    {
+      keys: "o",
+      label: "Open PR",
+      action: () => { if (selectedPR) window.open(selectedPR.url, "_blank"); },
+      group: "Navigation",
+    },
+    {
+      keys: "p",
+      label: "Open pipeline",
+      action: () => { if (selectedPR?.pipelineUrl) window.open(selectedPR.pipelineUrl, "_blank"); },
+      group: "Navigation",
+    },
+    {
+      keys: "a",
+      label: "Actions",
+      action: () => { if (selectedPR) setActionsOpen(true); },
+      group: "Navigation",
+    },
+    { keys: "i", label: "Toggle sidebar", action: () => setSidebarOpen((o) => !o), group: "Navigation" },
 
     { keys: "g r", label: "Repo", action: () => setGroup(Option.some("repo")), group: "Group by" },
     { keys: "g k", label: "Ticket", action: () => setGroup(Option.some("ticket")), group: "Group by" },
     { keys: "g s", label: "Stack", action: () => setGroup(Option.some("stack")), group: "Group by" },
     { keys: "g n", label: "None", action: () => setGroup(Option.some("none")), group: "Group by" },
 
-    { keys: "z o", label: "Open all groups", action: () => setClosedGroups(() => new Set()), group: "Folds" },
-    { keys: "z c", label: "Close current group", action: () => { if (selectedGroup) { closeGroup(setClosedGroups, selectedGroup); setSelectedUrl(null); } }, group: "Folds" },
-    { keys: "z a", label: "Close all groups", action: () => { setClosedGroups(() => new Set(groupedNames)); setSelectedUrl(null); }, group: "Folds" },
+    {
+      keys: "z o",
+      label: "Open all groups",
+      action: () => setClosedGroups(() => new Set()),
+      group: "Folds",
+    },
+    {
+      keys: "z c",
+      label: "Close current group",
+      action: () => {
+        if (selectedGroupName) {
+          closeGroup(setClosedGroups, selectedGroupName);
+          setSelectedNavIndex(-1);
+        }
+      },
+      group: "Folds",
+    },
+    {
+      keys: "z a",
+      label: "Close all groups",
+      action: () => { setClosedGroups(() => new Set(groupedNames)); setSelectedNavIndex(-1); },
+      group: "Folds",
+    },
+    {
+      keys: "Enter",
+      label: "Toggle fold / open PR",
+      action: () => {
+        if (selectedItem?._tag === "group") {
+          toggleGroup(setClosedGroups, selectedItem.name);
+        } else if (selectedPR) {
+          window.open(selectedPR.url, "_blank");
+        }
+      },
+      group: "Navigation",
+    },
 
     { keys: "/", label: "Search", action: () => filterInputRef.current?.focus(), group: "Filters" },
     { keys: "f r", label: "Repo filter", action: () => repoFilterRef.current?.click(), group: "Filters" },
@@ -101,8 +144,6 @@ export function App() {
     { keys: "f t", label: "Ticket filter", action: () => ticketFilterRef.current?.click(), group: "Filters" },
     { keys: "c f", label: "Clear all filters", action: () => { setSearch(Option.some("")); setSelectedRepos([]); setSelectedPipelines([]); setSelectedReviews([]); setSelectedTickets([]); }, group: "Filters" },
 
-    { keys: "i", label: "Toggle sidebar", action: () => setSidebarOpen((o) => !o), group: "Navigation" },
-
     { keys: "?", label: "Shortcuts", action: () => setHelpOpen((o) => !o), group: "General" },
     {
       keys: "Escape",
@@ -110,7 +151,6 @@ export function App() {
       enableInInputs: true,
       group: "General",
       action: () => {
-        // Layered dismiss: blur input → close modal → close sidebar → deselect
         if (document.activeElement instanceof HTMLElement && document.activeElement.tagName === "INPUT") {
           document.activeElement.blur();
           return;
@@ -118,10 +158,10 @@ export function App() {
         if (helpOpen) { setHelpOpen(false); return; }
         if (actionsOpen) { setActionsOpen(false); return; }
         if (sidebarOpen) { setSidebarOpen(false); return; }
-        if (selectedUrl) { setSelectedUrl(null); return; }
+        if (selectedNavIndex >= 0) { setSelectedNavIndex(-1); return; }
       },
     },
-  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedUrl, setSidebarOpen, setClosedGroups, displayOrder, selectedIndex, selectedPR, selectedGroup, groupedNames, helpOpen, actionsOpen, sidebarOpen, selectedUrl]);
+  ], [setGroup, setSearch, setSelectedRepos, setSelectedPipelines, setSelectedReviews, setSelectedTickets, setSelectedNavIndex, setSidebarOpen, setClosedGroups, navItems, selectedNavIndex, selectedPR, selectedGroupName, selectedItem, groupedNames, helpOpen, actionsOpen, sidebarOpen]);
 
   const pending = useShortcuts(shortcuts);
 
@@ -144,7 +184,7 @@ export function App() {
         <Sidebar />
       </div>
 
-      <FloatingBar pending={pending} shortcuts={shortcuts} selectedIndex={selectedIndex} />
+      <FloatingBar pending={pending} shortcuts={shortcuts} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
       <ActionsModal pr={selectedPR} open={actionsOpen} onClose={() => setActionsOpen(false)} />
     </>

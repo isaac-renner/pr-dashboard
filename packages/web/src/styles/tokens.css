@@ -381,6 +381,15 @@ tr.selected td a {
   background: var(--hover);
 }
 
+.group-header.selected {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+.group-header.selected a {
+  color: var(--selection-text);
+}
+
 .group-fold.group-active {
   background: var(--group-active);
 }
