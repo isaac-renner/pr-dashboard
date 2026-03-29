@@ -47,10 +47,10 @@ export function App() {
     }
   }, [navItems.length, selectedNavIndex, setSelectedNavIndex]);
 
-  // Close sidebar when nothing selected
+  // Close sidebar only when selection is fully cleared (not on group headers)
   useEffect(() => {
-    if (!selectedPR && sidebarOpen) setSidebarOpen(false);
-  }, [selectedPR, sidebarOpen, setSidebarOpen]);
+    if (selectedNavIndex === -1 && sidebarOpen) setSidebarOpen(false);
+  }, [selectedNavIndex, sidebarOpen, setSidebarOpen]);
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);

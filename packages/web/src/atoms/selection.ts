@@ -47,3 +47,16 @@ export const selectedUrlAtom: Atom.Atom<string | null> = Atom.make((get) => {
   const pr = get(selectedPRAtom);
   return pr?.url ?? null;
 });
+
+/**
+ * Last selected PR — persists when navigating to a group header.
+ * Used by the sidebar to keep showing context.
+ */
+import { Option } from "effect";
+
+export const lastSelectedPRAtom: Atom.Atom<PR | null> = Atom.make((get) => {
+  const current = get(selectedPRAtom);
+  if (current) return current;
+  const prev = get.self<PR | null>();
+  return Option.isSome(prev) ? prev.value : null;
+});

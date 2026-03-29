@@ -1,12 +1,12 @@
 import { useAtomValue } from "@effect/atom-react";
 import React from "react";
-import { selectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
+import { lastSelectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import { timeAgo, truncate } from "../lib/format.js";
 import { getReviewLabel } from "../lib/types.js";
 
 export function Sidebar() {
   const open = useAtomValue(sidebarOpenAtom);
-  const pr = useAtomValue(selectedPRAtom);
+  const pr = useAtomValue(lastSelectedPRAtom);
 
   if (!open || !pr) return null;
 
