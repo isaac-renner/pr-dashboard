@@ -3,9 +3,10 @@
  */
 
 import * as Atom from "effect/unstable/reactivity/Atom";
-import { extractRepos, extractTickets, filterPRs, groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
-import type { NavItem, PR } from "../lib/types.js";
-import { filtersAtom } from "./filters.js";
+import { extractRepos, extractTickets, fuzzyMatch, groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
+import { FILTER_DEFS } from "../lib/filterDefs.js";
+import { filtersAtom, searchAtom } from "./filters.js";
+import { getReviewLabel, type NavItem, type PR } from "../lib/types.js";
 import { closedGroupsAtom } from "./groups.js";
 import { prsAtom, reviewRequestedAtom } from "./prs.js";
 import { viewModeAtom } from "./view.js";
@@ -28,8 +29,30 @@ export const availableTicketsAtom: Atom.Atom<string[]> = Atom.make((get) => {
 
 export const filteredPrsAtom: Atom.Atom<PR[]> = Atom.make((get) => {
   const prs = get(activeListAtom);
-  const filters = get(filtersAtom);
-  return filterPRs(prs, filters);
+  const searchOpt = get(searchAtom);
+  const search = searchOpt._tag === "Some" ? searchOpt.value : "";
+
+  // Build searchable text for fuzzy matching
+  const searchableText = (pr: PR) => [
+    pr.title,
+    pr.headRefName,
+    getReviewLabel(pr),
+    pr.pipelineState === "SUCCESS" ? "Passing"
+      : pr.pipelineState === "FAILURE" ? "Failing"
+      : pr.pipelineState === "PENDING" ? "Pending"
+      : "",
+  ].join(" ");
+
+  return prs
+    .filter((pr) => {
+      if (pr.state !== "OPEN") return false;
+      if (search && !fuzzyMatch(search, searchableText(pr))) return false;
+      // Apply all declarative filter predicates
+      return FILTER_DEFS.every((def) => def.match(pr, [...get(def.selectedAtom)]));
+    })
+    .sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
 });
 
 export const groupedPrsAtom: Atom.Atom<Map<string, PR[]>> = Atom.make((get) => {
