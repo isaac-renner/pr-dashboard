@@ -1,8 +1,8 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import React from "react";
+import { RESOLVED_FILTERS, type ResolvedFilter } from "../atoms/filterRegistry.js";
 import { searchAtom } from "../atoms/filters.js";
-import { FILTER_DEFS, type FilterDef } from "../lib/filterDefs.js";
 import { ChipFilterPopover } from "./ChipFilterPopover.js";
 
 interface FilterBarProps {
@@ -10,10 +10,10 @@ interface FilterBarProps {
   readonly filterRefs?: Record<string, React.RefObject<HTMLButtonElement | null>>;
 }
 
-function FilterChip({ def, triggerRef }: { def: FilterDef; triggerRef?: React.RefObject<HTMLButtonElement | null> | undefined }) {
-  const options = useAtomValue(def.optionsAtom);
-  const selected = useAtomValue(def.selectedAtom);
-  const setSelected = useAtomSet(def.selectedAtom);
+function FilterChip({ filter, triggerRef }: { filter: ResolvedFilter; triggerRef?: React.RefObject<HTMLButtonElement | null> | undefined }) {
+  const options = useAtomValue(filter.optionsAtom);
+  const selected = useAtomValue(filter.selectedAtom);
+  const setSelected = useAtomSet(filter.selectedAtom);
 
   function toggle(value: string) {
     setSelected((current) =>
@@ -23,7 +23,7 @@ function FilterChip({ def, triggerRef }: { def: FilterDef; triggerRef?: React.Re
 
   return (
     <ChipFilterPopover
-      label={def.label}
+      label={filter.def.label}
       options={[...options]}
       selected={[...selected]}
       onToggle={toggle}
@@ -34,32 +34,28 @@ function FilterChip({ def, triggerRef }: { def: FilterDef; triggerRef?: React.Re
 }
 
 function ActiveChips() {
-  const chips: React.ReactNode[] = [];
-
-  for (const def of FILTER_DEFS) {
-    chips.push(<ActiveChipsForDef key={def.id} def={def} />);
-  }
-
-  return chips.length > 0 ? <div className="flex-wrap gap-0" style={{ marginTop: "calc(var(--line-height) / 2)" }}>{chips}</div> : null;
+  return (
+    <>
+      {RESOLVED_FILTERS.map((filter) => (
+        <ActiveChipsForFilter key={filter.def.id} filter={filter} />
+      ))}
+    </>
+  );
 }
 
-function ActiveChipsForDef({ def }: { def: FilterDef }) {
-  const selected = useAtomValue(def.selectedAtom);
-  const setSelected = useAtomSet(def.selectedAtom);
+function ActiveChipsForFilter({ filter }: { filter: ResolvedFilter }) {
+  const selected = useAtomValue(filter.selectedAtom);
+  const setSelected = useAtomSet(filter.selectedAtom);
 
   if (selected.length === 0) return null;
-
-  function remove(value: string) {
-    setSelected((current) => current.filter((v) => v !== value));
-  }
 
   return (
     <>
       {selected.map((value) => (
         <button
-          key={`${def.id}:${value}`}
+          key={`${filter.def.id}:${value}`}
           className="chip"
-          onClick={() => remove(value)}
+          onClick={() => setSelected((current) => current.filter((v) => v !== value))}
           type="button"
         >
           {value} ×
@@ -74,8 +70,7 @@ export function FilterBar({ filterInputRef, filterRefs }: FilterBarProps) {
   const setSearch = useAtomSet(searchAtom);
   const searchVal = search._tag === "Some" ? search.value : "";
 
-  // Check if any filter has active selections
-  const hasActive = FILTER_DEFS.some(() => true); // ActiveChips handles visibility
+  const hasActive = RESOLVED_FILTERS.some(() => true);
 
   return (
     <>
@@ -88,15 +83,17 @@ export function FilterBar({ filterInputRef, filterRefs }: FilterBarProps) {
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           placeholder="search"
         />
-        {FILTER_DEFS.map((def) => (
+        {RESOLVED_FILTERS.map((filter) => (
           <FilterChip
-            key={def.id}
-            def={def}
-            triggerRef={filterRefs?.[def.id]}
+            key={filter.def.id}
+            filter={filter}
+            triggerRef={filterRefs?.[filter.def.id]}
           />
         ))}
       </div>
-      <ActiveChips />
+      <div className="flex-wrap gap-0" style={{ marginTop: "calc(var(--line-height) / 2)" }}>
+        <ActiveChips />
+      </div>
     </>
   );
 }

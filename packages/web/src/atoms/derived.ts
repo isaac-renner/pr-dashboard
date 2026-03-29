@@ -5,7 +5,7 @@
 import * as Atom from "effect/unstable/reactivity/Atom";
 import { extractRepos, extractTickets, fuzzyMatch, groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
 import { FILTER_DEFS } from "../lib/filterDefs.js";
-import { filtersAtom, searchAtom } from "./filters.js";
+import { filtersAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "./filters.js";
 import { getReviewLabel, type NavItem, type PR } from "../lib/types.js";
 import { closedGroupsAtom } from "./groups.js";
 import { prsAtom, reviewRequestedAtom } from "./prs.js";
@@ -27,12 +27,19 @@ export const availableTicketsAtom: Atom.Atom<string[]> = Atom.make((get) => {
   return extractTickets(prs);
 });
 
+// Selected atom lookup by filter id (avoids circular dep with filterRegistry)
+const selectedAtomById: Record<string, Atom.Writable<ReadonlyArray<string>>> = {
+  repos: selectedReposAtom,
+  review: selectedReviewsAtom,
+  ticket: selectedTicketsAtom,
+  pipeline: selectedPipelinesAtom,
+};
+
 export const filteredPrsAtom: Atom.Atom<PR[]> = Atom.make((get) => {
   const prs = get(activeListAtom);
   const searchOpt = get(searchAtom);
   const search = searchOpt._tag === "Some" ? searchOpt.value : "";
 
-  // Build searchable text for fuzzy matching
   const searchableText = (pr: PR) => [
     pr.title,
     pr.headRefName,
@@ -47,8 +54,11 @@ export const filteredPrsAtom: Atom.Atom<PR[]> = Atom.make((get) => {
     .filter((pr) => {
       if (pr.state !== "OPEN") return false;
       if (search && !fuzzyMatch(search, searchableText(pr))) return false;
-      // Apply all declarative filter predicates
-      return FILTER_DEFS.every((def) => def.match(pr, [...get(def.selectedAtom)]));
+      return FILTER_DEFS.every((def) => {
+        const selectedAtom = selectedAtomById[def.id];
+        if (!selectedAtom) return true;
+        return def.match(pr, [...get(selectedAtom)]);
+      });
     })
     .sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
