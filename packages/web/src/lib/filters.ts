@@ -155,6 +155,72 @@ export function groupByRepo(prs: PR[]): Map<string, PR[]> {
   return sorted;
 }
 
+export function groupByReview(prs: PR[]): Map<string, PR[]> {
+  const groups = new Map<string, PR[]>();
+
+  for (const pr of prs) {
+    const key = getReviewLabel(pr);
+    const list = groups.get(key);
+    if (list) {
+      list.push(pr);
+    } else {
+      groups.set(key, [pr]);
+    }
+  }
+
+  // Sort groups in a meaningful order: actionable states first
+  const order: Record<string, number> = {
+    "Changes Requested": 0,
+    "Commented": 1,
+    "Unreviewed": 2,
+    "Draft": 3,
+    "Approved": 4,
+  };
+
+  const sorted = new Map<string, PR[]>();
+  const keys = [...groups.keys()].sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
+
+  for (const key of keys) {
+    sorted.set(key, groups.get(key)!);
+  }
+
+  return sorted;
+}
+
+export function groupByPipeline(prs: PR[]): Map<string, PR[]> {
+  const groups = new Map<string, PR[]>();
+
+  for (const pr of prs) {
+    const key = pr.pipelineState === "SUCCESS" ? "Passing"
+      : pr.pipelineState === "FAILURE" ? "Failing"
+      : pr.pipelineState === "PENDING" ? "Pending"
+      : "None";
+    const list = groups.get(key);
+    if (list) {
+      list.push(pr);
+    } else {
+      groups.set(key, [pr]);
+    }
+  }
+
+  // Sort groups: failures first (most actionable), then pending, passing, none
+  const order: Record<string, number> = {
+    "Failing": 0,
+    "Pending": 1,
+    "Passing": 2,
+    "None": 3,
+  };
+
+  const sorted = new Map<string, PR[]>();
+  const keys = [...groups.keys()].sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
+
+  for (const key of keys) {
+    sorted.set(key, groups.get(key)!);
+  }
+
+  return sorted;
+}
+
 /**
  * Group PRs by stack.
  *

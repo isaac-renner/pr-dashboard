@@ -69,7 +69,7 @@ export interface Filters {
   pipelines: ReadonlyArray<string>;
   reviews: ReadonlyArray<string>;
   tickets: ReadonlyArray<string>;
-  group: "ticket" | "repo" | "stack" | "none";
+  group: "ticket" | "repo" | "stack" | "review" | "pipeline" | "none";
 }
 
 // --- Navigation items (j/k walks these) ---

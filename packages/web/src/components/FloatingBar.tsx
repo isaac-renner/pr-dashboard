@@ -19,6 +19,8 @@ export function FloatingBar({ pending, shortcuts }: FloatingBarProps) {
 
   const groupLabel = filters.group === "stack" ? "STACK"
     : filters.group === "repo" ? "REPO"
+    : filters.group === "review" ? "REVIEW"
+    : filters.group === "pipeline" ? "PIPELINE"
     : filters.group === "none" ? "ALL"
     : "TICKET";
 

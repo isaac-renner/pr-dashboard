@@ -3,7 +3,7 @@
  */
 
 import * as Atom from "effect/unstable/reactivity/Atom";
-import { extractRepos, extractTickets, fuzzyMatch, groupByRepo, groupByStack, groupByTicket } from "../lib/filters.js";
+import { extractRepos, extractTickets, fuzzyMatch, groupByPipeline, groupByRepo, groupByReview, groupByStack, groupByTicket } from "../lib/filters.js";
 import { FILTER_DEFS } from "../lib/filterDefs.js";
 import { filtersAtom, searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "./filters.js";
 import { getReviewLabel, type NavItem, type PR } from "../lib/types.js";
@@ -80,6 +80,10 @@ export const groupedPrsAtom: Atom.Atom<Map<string, PR[]>> = Atom.make((get) => {
     ? groupByStack(filtered)
     : filters.group === "ticket"
     ? groupByTicket(filtered)
+    : filters.group === "review"
+    ? groupByReview(filtered)
+    : filters.group === "pipeline"
+    ? groupByPipeline(filtered)
     : groupByRepo(filtered);
 });
 
