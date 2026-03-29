@@ -83,6 +83,11 @@ export function ChipFilterPopover({
       setOpen(false);
       return;
     }
+    if (e.key === " " && focusIndex >= 0 && focusIndex < filtered.length) {
+      e.preventDefault();
+      onToggle(filtered[focusIndex]!);
+      return;
+    }
   }, [filtered, focusIndex, onToggle]);
 
   const displayLabel = selected.length > 0
