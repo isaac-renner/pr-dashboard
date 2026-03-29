@@ -582,9 +582,10 @@ tr.selected td a {
 .status-bar-view {
   background: var(--selection-bg);
   color: var(--selection-text);
-  padding: 0 1ch;
+  padding: 0 2ch;
   font-weight: 600;
   margin-left: 1ch;
+  margin-right: -2ch;
 }
 
 /* ── Review queue ── */
