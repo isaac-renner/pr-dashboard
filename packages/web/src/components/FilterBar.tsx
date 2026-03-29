@@ -1,54 +1,81 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { Option } from "effect";
 import React from "react";
-import { availableReposAtom, availableTicketsAtom } from "../atoms/derived.js";
-import { searchAtom, selectedPipelinesAtom, selectedReposAtom, selectedReviewsAtom, selectedTicketsAtom } from "../atoms/filters.js";
-import { REVIEW_OPTIONS } from "../lib/types.js";
+import { searchAtom } from "../atoms/filters.js";
+import { FILTER_DEFS, type FilterDef } from "../lib/filterDefs.js";
 import { ChipFilterPopover } from "./ChipFilterPopover.js";
-
-const PIPELINE_OPTIONS = ["Passing", "Failing", "Pending", "None"];
 
 interface FilterBarProps {
   readonly filterInputRef?: React.RefObject<HTMLInputElement | null>;
-  readonly repoFilterRef?: React.RefObject<HTMLButtonElement | null>;
-  readonly reviewFilterRef?: React.RefObject<HTMLButtonElement | null>;
-  readonly pipelineFilterRef?: React.RefObject<HTMLButtonElement | null>;
-  readonly ticketFilterRef?: React.RefObject<HTMLButtonElement | null>;
+  readonly filterRefs?: Record<string, React.RefObject<HTMLButtonElement | null>>;
 }
 
-export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipelineFilterRef, ticketFilterRef }: FilterBarProps) {
-  const search = useAtomValue(searchAtom);
-  const selectedRepos = useAtomValue(selectedReposAtom);
-  const selectedPipelines = useAtomValue(selectedPipelinesAtom);
-  const selectedReviews = useAtomValue(selectedReviewsAtom);
-  const selectedTickets = useAtomValue(selectedTicketsAtom);
-  const availableTickets = useAtomValue(availableTicketsAtom);
-  const availableRepos = useAtomValue(availableReposAtom);
-  const setSearch = useAtomSet(searchAtom);
-  const setSelectedRepos = useAtomSet(selectedReposAtom);
-  const setSelectedPipelines = useAtomSet(selectedPipelinesAtom);
-  const setSelectedTickets = useAtomSet(selectedTicketsAtom);
-  const setSelectedReviews = useAtomSet(selectedReviewsAtom);
+function FilterChip({ def, triggerRef }: { def: FilterDef; triggerRef?: React.RefObject<HTMLButtonElement | null> | undefined }) {
+  const options = useAtomValue(def.optionsAtom);
+  const selected = useAtomValue(def.selectedAtom);
+  const setSelected = useAtomSet(def.selectedAtom);
 
-  const searchVal = search._tag === "Some" ? search.value : "";
-
-  function toggleItem(
-    set: (fn: (c: ReadonlyArray<string>) => ReadonlyArray<string>) => void,
-    value: string,
-  ) {
-    set((current) =>
+  function toggle(value: string) {
+    setSelected((current) =>
       current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
     );
   }
 
-  function removeItem(
-    set: (fn: (c: ReadonlyArray<string>) => ReadonlyArray<string>) => void,
-    value: string,
-  ) {
-    set((current) => current.filter((v) => v !== value));
+  return (
+    <ChipFilterPopover
+      label={def.label}
+      options={[...options]}
+      selected={[...selected]}
+      onToggle={toggle}
+      onClear={() => setSelected([])}
+      triggerRef={triggerRef}
+    />
+  );
+}
+
+function ActiveChips() {
+  const chips: React.ReactNode[] = [];
+
+  for (const def of FILTER_DEFS) {
+    chips.push(<ActiveChipsForDef key={def.id} def={def} />);
   }
 
-  const hasActive = selectedRepos.length > 0 || selectedPipelines.length > 0 || selectedReviews.length > 0 || selectedTickets.length > 0;
+  return chips.length > 0 ? <div className="flex-wrap gap-0" style={{ marginTop: "calc(var(--line-height) / 2)" }}>{chips}</div> : null;
+}
+
+function ActiveChipsForDef({ def }: { def: FilterDef }) {
+  const selected = useAtomValue(def.selectedAtom);
+  const setSelected = useAtomSet(def.selectedAtom);
+
+  if (selected.length === 0) return null;
+
+  function remove(value: string) {
+    setSelected((current) => current.filter((v) => v !== value));
+  }
+
+  return (
+    <>
+      {selected.map((value) => (
+        <button
+          key={`${def.id}:${value}`}
+          className="chip"
+          onClick={() => remove(value)}
+          type="button"
+        >
+          {value} ×
+        </button>
+      ))}
+    </>
+  );
+}
+
+export function FilterBar({ filterInputRef, filterRefs }: FilterBarProps) {
+  const search = useAtomValue(searchAtom);
+  const setSearch = useAtomSet(searchAtom);
+  const searchVal = search._tag === "Some" ? search.value : "";
+
+  // Check if any filter has active selections
+  const hasActive = FILTER_DEFS.some(() => true); // ActiveChips handles visibility
 
   return (
     <>
@@ -61,88 +88,15 @@ export function FilterBar({ filterInputRef, repoFilterRef, reviewFilterRef, pipe
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           placeholder="search"
         />
-
-        <ChipFilterPopover
-          label="Repos"
-          options={[...availableRepos]}
-          selected={[...selectedRepos]}
-          onToggle={(v) => toggleItem(setSelectedRepos, v)}
-          onClear={() => setSelectedRepos([])}
-          triggerRef={repoFilterRef}
-        />
-
-        <ChipFilterPopover
-          label="Review"
-          options={[...REVIEW_OPTIONS]}
-          selected={[...selectedReviews]}
-          onToggle={(v) => toggleItem(setSelectedReviews, v)}
-          onClear={() => setSelectedReviews([])}
-          triggerRef={reviewFilterRef}
-        />
-
-        <ChipFilterPopover
-          label="Ticket"
-          options={[...availableTickets]}
-          selected={[...selectedTickets]}
-          onToggle={(v) => toggleItem(setSelectedTickets, v)}
-          onClear={() => setSelectedTickets([])}
-          triggerRef={ticketFilterRef}
-        />
-
-        <ChipFilterPopover
-          label="Pipeline"
-          options={PIPELINE_OPTIONS}
-          selected={[...selectedPipelines]}
-          onToggle={(v) => toggleItem(setSelectedPipelines, v)}
-          onClear={() => setSelectedPipelines([])}
-          triggerRef={pipelineFilterRef}
-        />
+        {FILTER_DEFS.map((def) => (
+          <FilterChip
+            key={def.id}
+            def={def}
+            triggerRef={filterRefs?.[def.id]}
+          />
+        ))}
       </div>
-
-      {hasActive && (
-        <div className="flex-wrap gap-0" style={{ marginTop: "calc(var(--line-height) / 2)" }}>
-          {selectedRepos.map((repo) => (
-            <button
-              key={`repo:${repo}`}
-              className="chip"
-              onClick={() => removeItem(setSelectedRepos, repo)}
-              type="button"
-            >
-              {repo} ×
-            </button>
-          ))}
-          {selectedReviews.map((r) => (
-            <button
-              key={`review:${r}`}
-              className="chip"
-              onClick={() => removeItem(setSelectedReviews, r)}
-              type="button"
-            >
-              {r} ×
-            </button>
-          ))}
-          {selectedTickets.map((t) => (
-            <button
-              key={`ticket:${t}`}
-              className="chip"
-              onClick={() => removeItem(setSelectedTickets, t)}
-              type="button"
-            >
-              {t} ×
-            </button>
-          ))}
-          {selectedPipelines.map((p) => (
-            <button
-              key={`pipeline:${p}`}
-              className="chip"
-              onClick={() => removeItem(setSelectedPipelines, p)}
-              type="button"
-            >
-              {p} ×
-            </button>
-          ))}
-        </div>
-      )}
+      <ActiveChips />
     </>
   );
 }
