@@ -781,6 +781,46 @@ tr.selected td a {
   align-items: center;
 }
 
+/* ── Buildkite job breakdown ── */
+
+.bk-jobs {
+  margin-top: calc(var(--line-height) / 2);
+  padding: 0 1ch;
+}
+
+.bk-jobs > * + * {
+  margin-top: 0;
+}
+
+.bk-job {
+  display: flex;
+  gap: 1ch;
+  align-items: baseline;
+  padding: calc(var(--line-height) / 4) 0;
+  border-bottom: 1px dotted var(--border-color);
+}
+
+.bk-job:last-child {
+  border-bottom: none;
+}
+
+.bk-job-state {
+  min-width: 11ch;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.bk-job-label {
+  word-break: break-word;
+}
+
+.bk-passed .bk-job-state { opacity: 0.5; }
+.bk-failed .bk-job-state { opacity: 1; }
+.bk-running .bk-job-state { opacity: 0.8; }
+.bk-blocked .bk-job-state { opacity: 0.8; }
+.bk-soft-failed .bk-job-state { opacity: 0.6; }
+.bk-pending .bk-job-state { opacity: 0.4; }
+
 /* ── Responsive ── */
 
 @media (max-width: 720px) {

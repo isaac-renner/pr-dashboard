@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@pr-dashboard/shared": "workspace:*",
+    "@pr-dashboard/buildkite": "workspace:*",
     "@pr-dashboard/github-app": "workspace:*",
     "@pr-dashboard/github-graphql": "workspace:*"
   },

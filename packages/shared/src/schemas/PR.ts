@@ -51,6 +51,37 @@ export const MergeableState = Schema.Literals(
 export type MergeableState = typeof MergeableState.Type;
 
 // -----------------------------------------------------------------------------
+// Buildkite build/job schemas
+// -----------------------------------------------------------------------------
+
+export class BuildkiteJob extends Schema.Class<BuildkiteJob>("BuildkiteJob")({
+  id: Schema.String,
+  label: Schema.String.pipe(Schema.NullOr),
+  state: Schema.String,
+  url: Schema.String.pipe(Schema.NullOr),
+  startedAt: Schema.String.pipe(Schema.NullOr),
+  finishedAt: Schema.String.pipe(Schema.NullOr),
+  softFailed: Schema.Boolean,
+  type: Schema.Literals(["command", "block", "wait", "trigger"] as const),
+}) {}
+
+export class BuildkiteBuild extends Schema.Class<BuildkiteBuild>(
+  "BuildkiteBuild",
+)({
+  number: Schema.Number,
+  state: Schema.String,
+  url: Schema.String,
+  message: Schema.String.pipe(Schema.NullOr),
+  createdAt: Schema.String,
+  startedAt: Schema.String.pipe(Schema.NullOr),
+  finishedAt: Schema.String.pipe(Schema.NullOr),
+  rebuiltFrom: Schema.Number.pipe(Schema.NullOr),
+  jobs: Schema.Array(BuildkiteJob),
+  blockedCount: Schema.Number,
+  failedCount: Schema.Number,
+}) {}
+
+// -----------------------------------------------------------------------------
 // PR — the enriched pull request
 // -----------------------------------------------------------------------------
 
@@ -74,6 +105,7 @@ export class PR extends Schema.Class<PR>("PR")({
   unresolvedCount: Schema.Number,
   unresolvedThreads: Schema.Array(UnresolvedThread),
   reviewState: ReviewState,
+  buildkite: BuildkiteBuild.pipe(Schema.NullOr),
 }) {}
 
 // -----------------------------------------------------------------------------

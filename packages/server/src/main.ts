@@ -5,6 +5,7 @@
  * run Effects from Bun.serve() handlers and periodic refresh.
  */
 
+import { BuildkiteClient, BuildkiteClientLive, parseBuildkiteUrl } from "@pr-dashboard/buildkite";
 import { GitHubGraphQLClientLive } from "@pr-dashboard/github-graphql";
 import type { PR, SessionRef } from "@pr-dashboard/shared";
 import { Effect, Layer, ManagedRuntime } from "effect";
@@ -25,6 +26,7 @@ const MainLayer = Layer.mergeAll(
   PRStoreLive,
   GitHubLayer,
   OpenCodeClientLive,
+  BuildkiteClientLive,
 );
 
 // -----------------------------------------------------------------------------
@@ -70,6 +72,7 @@ const refreshCache = Effect.gen(function*() {
     const prStore = yield* Effect.service(PRStore);
     const github = yield* Effect.service(GitHubClient);
     const opencode = yield* Effect.service(OpenCodeClient);
+    const buildkite = yield* Effect.service(BuildkiteClient);
 
     // Fetch PRs — on failure, keep the existing store contents
     const result = yield* github.fetchAllOpenPRs.pipe(
@@ -96,6 +99,39 @@ const refreshCache = Effect.gen(function*() {
         ),
       );
       sessionCache = new Map(correlations);
+    }
+
+    // Enrich with Buildkite build details — on failure, keep PRs without build data
+    if (buildkite.enabled) {
+      const allPrs = yield* prStore.getAll;
+      const enriched = yield* Effect.forEach(
+        allPrs,
+        (pr) => {
+          if (!pr.pipelineUrl || !parseBuildkiteUrl(pr.pipelineUrl)) {
+            return Effect.succeed(pr);
+          }
+          return buildkite.fetchBuildFromUrl(pr.pipelineUrl).pipe(
+            Effect.map((build) => (build ? { ...pr, buildkite: build } : pr)),
+            Effect.catch(() => Effect.succeed(pr)),
+          );
+        },
+        { concurrency: 5 },
+      );
+      // Also enrich reviewRequested PRs
+      reviewRequestedCache = yield* Effect.forEach(
+        reviewRequestedCache,
+        (pr) => {
+          if (!pr.pipelineUrl || !parseBuildkiteUrl(pr.pipelineUrl)) {
+            return Effect.succeed(pr);
+          }
+          return buildkite.fetchBuildFromUrl(pr.pipelineUrl).pipe(
+            Effect.map((build) => (build ? { ...pr, buildkite: build } : pr)),
+            Effect.catch(() => Effect.succeed(pr)),
+          );
+        },
+        { concurrency: 5 },
+      );
+      yield* prStore.replaceAll(enriched);
     }
 
     lastRefreshed = new Date().toISOString();

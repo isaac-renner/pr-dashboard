@@ -28,6 +28,13 @@
         "typescript": "^6.0.2",
       },
     },
+    "packages/buildkite": {
+      "name": "@pr-dashboard/buildkite",
+      "version": "0.0.1",
+      "peerDependencies": {
+        "effect": "^4.0.0-beta.0",
+      },
+    },
     "packages/github-app": {
       "name": "@pr-dashboard/github-app",
       "version": "0.0.1",
@@ -61,6 +68,7 @@
       "name": "@pr-dashboard/server",
       "version": "0.0.1",
       "dependencies": {
+        "@pr-dashboard/buildkite": "workspace:*",
         "@pr-dashboard/github-app": "workspace:*",
         "@pr-dashboard/github-graphql": "workspace:*",
         "@pr-dashboard/shared": "workspace:*",
@@ -402,6 +410,8 @@
     "@opentelemetry/sdk-trace-web": ["@opentelemetry/sdk-trace-web@2.6.1", "", { "dependencies": { "@opentelemetry/core": "2.6.1", "@opentelemetry/sdk-trace-base": "2.6.1" }, "peerDependencies": { "@opentelemetry/api": ">=1.0.0 <1.10.0" } }, "sha512-JQevIjBlWGcKBfuwe7tdxGR/75RERsf1OOIvUzPKq86J8qhzkyjnLTTuPNPLRQF1xxEe65W5aI1Uwl6yWUGPQQ=="],
 
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.40.0", "", {}, "sha512-cifvXDhcqMwwTlTK04GBNeIe7yyo28Mfby85QXFe1Yk8nmi36Ab/5UQwptOx84SsoGNRg+EVSjwzfSZMy6pmlw=="],
+
+    "@pr-dashboard/buildkite": ["@pr-dashboard/buildkite@workspace:packages/buildkite"],
 
     "@pr-dashboard/github-app": ["@pr-dashboard/github-app@workspace:packages/github-app"],
 

@@ -83,6 +83,108 @@ export const SIDEBAR_SECTIONS: ReadonlyArray<SidebarSectionDef> = [
     },
   },
   {
+    id: "buildkite",
+    label: "Build",
+    render: (pr) => {
+      const build = pr.buildkite;
+      if (!build) return null;
+
+      function jobStateLabel(state: string, softFailed: boolean): string {
+        if (softFailed) return "soft failed";
+        switch (state) {
+          case "PASSED": return "passed";
+          case "FAILED": return "failed";
+          case "RUNNING": return "running";
+          case "BLOCKED": return "blocked";
+          case "WAITING": return "waiting";
+          case "CANCELED": case "CANCELING": return "canceled";
+          case "SKIPPED": case "NOT_RUN": return "skipped";
+          case "ASSIGNED": case "ACCEPTED": case "SCHEDULED": return "pending";
+          default: return state.toLowerCase();
+        }
+      }
+
+      function jobStateClass(state: string, softFailed: boolean): string {
+        if (softFailed) return "bk-soft-failed";
+        switch (state) {
+          case "PASSED": return "bk-passed";
+          case "FAILED": return "bk-failed";
+          case "RUNNING": return "bk-running";
+          case "BLOCKED": return "bk-blocked";
+          default: return "bk-pending";
+        }
+      }
+
+      function formatDuration(start: string | null, end: string | null): string | null {
+        if (!start) return null;
+        const startMs = new Date(start).getTime();
+        const endMs = end ? new Date(end).getTime() : Date.now();
+        const diffMs = Math.max(0, endMs - startMs);
+        const seconds = Math.floor(diffMs / 1000);
+        if (seconds < 60) return `${seconds}s`;
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (minutes < 60) return `${minutes}m ${secs}s`;
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${hours}h ${mins}m`;
+      }
+
+      const visibleJobs = build.jobs.filter((j) => j.type === "command" || j.type === "block");
+      const duration = formatDuration(build.startedAt, build.finishedAt);
+
+      return (
+        <>
+          <div className="sidebar-field">
+            <span className="muted">Build</span>
+            <span>
+              <a href={build.url} target="_blank" rel="noreferrer">
+                #{build.number}
+              </a>
+              {build.rebuiltFrom != null && (
+                <span className="muted"> (retry of #{build.rebuiltFrom})</span>
+              )}
+            </span>
+          </div>
+          {duration && (
+            <div className="sidebar-field">
+              <span className="muted">Duration</span>
+              <span>{duration}{!build.finishedAt ? " (running)" : ""}</span>
+            </div>
+          )}
+          {build.failedCount > 0 && (
+            <div className="sidebar-field">
+              <span className="muted">Failed</span>
+              <span>{build.failedCount} job{build.failedCount > 1 ? "s" : ""}</span>
+            </div>
+          )}
+          {build.blockedCount > 0 && (
+            <div className="sidebar-field">
+              <span className="muted">Blocked</span>
+              <span>{build.blockedCount} step{build.blockedCount > 1 ? "s" : ""}</span>
+            </div>
+          )}
+          {visibleJobs.length > 0 && (
+            <div className="bk-jobs">
+              {visibleJobs.map((job) => (
+                <div key={job.id} className={`bk-job ${jobStateClass(job.state, job.softFailed)}`}>
+                  <span className="bk-job-state">{jobStateLabel(job.state, job.softFailed)}</span>
+                  {job.url ? (
+                    <a href={job.url} target="_blank" rel="noreferrer" className="bk-job-label">
+                      {job.label || "step"}
+                    </a>
+                  ) : (
+                    <span className="bk-job-label">{job.label || "step"}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      );
+    },
+  },
+  {
     id: "comments",
     label: "Unresolved Comments",
     render: (pr) => {

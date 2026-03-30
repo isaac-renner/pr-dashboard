@@ -285,5 +285,6 @@ export function enrichGraphQLNode(node: GQLNode, currentUser: string): PR {
     unresolvedCount: unresolved.length,
     unresolvedThreads: unresolved,
     reviewState: computeReviewState(node.reviews.nodes, currentUser),
+    buildkite: null,
   };
 }

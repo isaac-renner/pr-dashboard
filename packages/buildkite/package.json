@@ -1,0 +1,11 @@
+{
+  "name": "@pr-dashboard/buildkite",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "effect": "^4.0.0-beta.0"
+  }
+}

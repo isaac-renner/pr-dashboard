@@ -28,6 +28,31 @@ export interface SessionRef {
   url: string;
 }
 
+export interface BuildkiteJob {
+  id: string;
+  label: string | null;
+  state: string;
+  url: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  softFailed: boolean;
+  type: "command" | "block" | "wait" | "trigger";
+}
+
+export interface BuildkiteBuild {
+  number: number;
+  state: string;
+  url: string;
+  message: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  rebuiltFrom: number | null;
+  jobs: BuildkiteJob[];
+  blockedCount: number;
+  failedCount: number;
+}
+
 export interface PR {
   number: number;
   state: string;
@@ -48,6 +73,7 @@ export interface PR {
   unresolvedCount: number;
   unresolvedThreads: UnresolvedThread[];
   reviewState: "APPROVED" | "CHANGES_REQUESTED" | "PENDING";
+  buildkite: BuildkiteBuild | null;
   sessions: SessionRef[];
 }
 

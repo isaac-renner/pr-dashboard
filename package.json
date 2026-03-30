@@ -12,7 +12,7 @@
     "dev:otel": "concurrently -n tempo,loki,prom,otelcol,grafana,server,web -c yellow,magenta,cyan,blue,red,green,white \"tempo -config.file=./infra/tempo.yaml\" \"loki -config.file=./infra/loki.yaml\" \"prometheus --config.file=./infra/prometheus.yaml --storage.tsdb.path=.otel/prometheus-data\" \"otelcol-contrib --config=./infra/otel-collector.yaml\" \"grafana server -homepath $GRAFANA_HOME -config ./infra/grafana/grafana.ini\" \"bun run dev:server\" \"bun run dev:web\"",
     "lint": "eslint .",
     "codegen": "graphql-codegen --config packages/github-graphql/codegen.ts",
-    "check": "tsc --project packages/shared/tsconfig.json --noEmit && tsc --project packages/github-app/tsconfig.json --noEmit && tsc --project packages/github-graphql/tsconfig.json --noEmit && tsc --project packages/server/tsconfig.json --noEmit && tsc --project packages/web/tsconfig.json --noEmit"
+    "check": "tsc --project packages/shared/tsconfig.json --noEmit && tsc --project packages/github-app/tsconfig.json --noEmit && tsc --project packages/github-graphql/tsconfig.json --noEmit && tsc --project packages/buildkite/tsconfig.json --noEmit && tsc --project packages/server/tsconfig.json --noEmit && tsc --project packages/web/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@effect/atom-react": "^4.0.0-beta.42",
