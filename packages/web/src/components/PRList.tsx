@@ -104,7 +104,7 @@ export function PRList() {
   }
 
   return (
-    <div className={`panel ${showAuthor ? "pr-columns-author" : "pr-columns"}`}>
+    <div className={showAuthor ? "pr-columns-author" : "pr-columns"}>
       <div className="pr-grid-header">
         <div>PR</div>
         {showAuthor && <div>Author</div>}

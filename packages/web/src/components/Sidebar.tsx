@@ -4,14 +4,18 @@ import { lastSelectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import { SIDEBAR_SECTIONS } from "../lib/sidebarDefs.js";
 import { MergeButton } from "./MergeButton.js";
 
-export function Sidebar() {
+interface SidebarProps {
+  style?: React.CSSProperties;
+}
+
+export function Sidebar({ style }: SidebarProps) {
   const open = useAtomValue(sidebarOpenAtom);
   const pr = useAtomValue(lastSelectedPRAtom);
 
   if (!open || !pr) return null;
 
   return (
-    <div className="sidebar">
+    <div className="sidebar" style={style}>
       <div className="sidebar-content">
         <div className="sidebar-header">
           <a href={pr.url} target="_blank" rel="noreferrer">

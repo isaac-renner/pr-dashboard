@@ -539,6 +539,7 @@ tr.selected td a {
   display: flex;
   overflow: hidden;
   margin-top: var(--line-height);
+  border: var(--border) solid var(--border-color);
 }
 
 .shell-scroll > * + * { margin-top: 0; }
@@ -553,14 +554,30 @@ tr.selected td a {
   margin-top: var(--line-height);
 }
 
+/* ── Resize handle ── */
+
+.resize-handle {
+  width: var(--border);
+  flex-shrink: 0;
+  background: var(--border-color);
+  cursor: col-resize;
+  margin-top: 0;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  width: calc(var(--border) + 2px);
+  margin-left: -1px;
+  margin-right: -1px;
+  background: var(--text);
+}
+
 /* ── Sidebar ── */
 
 .sidebar {
   width: 40ch;
   flex-shrink: 0;
-  border: var(--border) solid var(--border-color);
   overflow-y: auto;
-  margin-left: calc(var(--border) * -1);
 }
 
 .sidebar-content {
@@ -955,12 +972,13 @@ a.bk-step:hover .bk-step-label {
   .shell-scroll {
     flex-direction: column;
   }
+  .resize-handle {
+    display: none;
+  }
   .sidebar {
-    width: 100%;
+    width: 100% !important;
     max-height: none;
     min-height: auto;
-    border-left: none;
-    border-right: none;
     border-top: var(--border) solid var(--border-color);
     margin: 0;
   }

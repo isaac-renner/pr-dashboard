@@ -98,9 +98,18 @@ export interface ShortcutEngine {
   readonly onPendingChange: (fn: (pending: string | null) => void) => void;
 }
 
+/** Accepts either a plain array or a ref-like object with a `.current` property. */
+type ShortcutSource =
+  | ReadonlyArray<ShortcutDef>
+  | { readonly current: ReadonlyArray<ShortcutDef> };
+
+function resolveShortcuts(source: ShortcutSource): ReadonlyArray<ShortcutDef> {
+  return "current" in source && !Array.isArray(source) ? source.current : source as ReadonlyArray<ShortcutDef>;
+}
+
 export function createShortcutEngine(
   target: EventTarget,
-  shortcuts: ReadonlyArray<ShortcutDef>,
+  source: ShortcutSource,
 ): ShortcutEngine {
   let pending: { key: string; raw: string; time: number } | null = null;
   let pendingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -119,22 +128,25 @@ export function createShortcutEngine(
     pendingListener?.(next?.raw ?? null);
   }
 
-  // Pre-parse all shortcuts
-  const parsed = shortcuts.map((def) => {
-    const presses = def.keys.split(" ").map(parsePress);
-    return { def, presses };
-  });
-
-  // Which keys can start a chord?
-  const chordStarters = new Set<string>();
-  for (const { presses } of parsed) {
-    if (presses.length >= 2) {
-      chordStarters.add(presses[0]!.key);
+  /** Parse shortcuts fresh from the source on each keypress so actions are always current. */
+  function resolve() {
+    const shortcuts = resolveShortcuts(source);
+    const parsed = shortcuts.map((def) => {
+      const presses = def.keys.split(" ").map(parsePress);
+      return { def, presses };
+    });
+    const chordStarters = new Set<string>();
+    for (const { presses } of parsed) {
+      if (presses.length >= 2) {
+        chordStarters.add(presses[0]!.key);
+      }
     }
+    return { parsed, chordStarters };
   }
 
   function handler(event: KeyboardEvent) {
     const inInput = isEditableTarget(event.target);
+    const { parsed, chordStarters } = resolve();
 
     // Try to match chords first (if we have a pending key)
     if (pending) {

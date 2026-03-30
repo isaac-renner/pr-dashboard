@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import * as AsyncResult from "effect/unstable/reactivity/AsyncResult";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { navItemsAtom } from "../atoms/derived.js";
 import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { selectedNavIndexAtom, selectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
@@ -11,8 +11,13 @@ import { ActionsModal } from "./ActionsModal.js";
 import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
 import { PRList } from "./PRList.js";
+import { ResizeHandle } from "./ResizeHandle.js";
 import { ShortcutHelp } from "./ShortcutHelp.js";
 import { Sidebar } from "./Sidebar.js";
+
+const DEFAULT_SIDEBAR_WIDTH = 400;
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 800;
 
 export function App() {
   useSSE();
@@ -27,6 +32,12 @@ export function App() {
 
   const { helpOpen, setHelpOpen, actionsOpen, setActionsOpen } = useModals();
   const { shortcuts, pending, filterInputRef, filterRefs } = useShortcutContext();
+
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+
+  const handleResize = useCallback((deltaX: number) => {
+    setSidebarWidth((w) => Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, w - deltaX)));
+  }, []);
 
   // Clamp selection
   useEffect(() => {
@@ -51,7 +62,8 @@ export function App() {
             {error && <div>Error: {error}</div>}
             {!loading && !error && <PRList />}
           </div>
-          <Sidebar />
+          {sidebarOpen && <ResizeHandle onResize={handleResize} />}
+          <Sidebar style={{ width: sidebarWidth }} />
         </div>
       </div>
       <FloatingBar pending={pending} shortcuts={shortcuts} />
