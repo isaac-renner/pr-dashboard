@@ -33,6 +33,7 @@ export interface BuildkiteJob {
   readonly finishedAt: string | null;
   readonly softFailed: boolean;
   readonly type: "command" | "block" | "wait" | "trigger";
+  readonly logSnippet: string | null;
 }
 
 export interface BuildkiteBuild {
@@ -224,6 +225,52 @@ export const BuildkiteClientLive = Layer.effect(BuildkiteClient)(
 
     yield* Effect.log("Buildkite integration enabled");
 
+    const LOG_TAIL_LINES = 50;
+
+    /**
+     * Fetch the raw log for a job via the REST API and return the last N lines.
+     * Returns null if the log can't be fetched (non-fatal).
+     */
+    function fetchJobLog(
+      org: string,
+      pipeline: string,
+      buildNumber: number,
+      jobId: string,
+    ): Effect.Effect<string | null, never> {
+      return Effect.gen(function*() {
+        const url = `https://api.buildkite.com/v2/organizations/${org}/pipelines/${pipeline}/builds/${buildNumber}/jobs/${jobId}/log`;
+        const response = yield* Effect.tryPromise({
+          try: () =>
+            fetch(url, {
+              headers: {
+                Authorization: `Bearer ${tokenStr}`,
+                Accept: "application/json",
+              },
+            }),
+          catch: () => null as never,
+        });
+
+        if (!response.ok) return null;
+
+        const json = yield* Effect.tryPromise({
+          try: () => response.json() as Promise<{ content?: string }>,
+          catch: () => null as never,
+        });
+
+        const content = json?.content;
+        if (!content) return null;
+
+        // Strip ANSI escape codes and take last N lines
+        const clean = content.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+        const lines = clean.split("\n");
+        const tail = lines.slice(-LOG_TAIL_LINES).join("\n").trim();
+        return tail || null;
+      }).pipe(
+        Effect.catch(() => Effect.succeed(null)),
+        Effect.withSpan("buildkite.fetchJobLog"),
+      );
+    }
+
     function executeQuery(
       slug: string,
     ): Effect.Effect<BuildkiteBuild | null, BuildkiteRequestError> {
@@ -277,23 +324,42 @@ export const BuildkiteClientLive = Layer.effect(BuildkiteClient)(
         const build = json.data?.build;
         if (!build) return null;
 
-        const jobs: BuildkiteJob[] = build.jobs.edges.map((edge) => {
-          const node = edge.node;
-          const typename = node.__typename;
-          return {
-            id: node.uuid,
-            label: node.label ?? null,
-            state: node.state,
-            url: node.url ?? null,
-            startedAt: node.startedAt ?? null,
-            finishedAt: node.finishedAt ?? null,
-            softFailed: node.softFailed ?? false,
-            type: typename === "JobTypeCommand" ? "command" as const
-              : typename === "JobTypeBlock" ? "block" as const
-              : typename === "JobTypeTrigger" ? "trigger" as const
-              : "wait" as const,
-          };
-        });
+        // Parse the slug to get org/pipeline for REST API calls
+        const slugParts = slug.split("/");
+        const slugOrg = slugParts[0] ?? "";
+        const slugPipeline = slugParts[1] ?? "";
+
+        const jobs: BuildkiteJob[] = yield* Effect.forEach(
+          build.jobs.edges,
+          (edge) => Effect.gen(function*() {
+            const node = edge.node;
+            const typename = node.__typename;
+            const isFailed = typename === "JobTypeCommand"
+              && node.state === "FAILED"
+              && !(node.softFailed ?? false);
+
+            // Fetch log snippet for failed command jobs
+            const logSnippet = isFailed
+              ? yield* fetchJobLog(slugOrg, slugPipeline, build.number, node.uuid)
+              : null;
+
+            return {
+              id: node.uuid,
+              label: node.label ?? null,
+              state: node.state,
+              url: node.url ?? null,
+              startedAt: node.startedAt ?? null,
+              finishedAt: node.finishedAt ?? null,
+              softFailed: node.softFailed ?? false,
+              type: typename === "JobTypeCommand" ? "command" as const
+                : typename === "JobTypeBlock" ? "block" as const
+                : typename === "JobTypeTrigger" ? "trigger" as const
+                : "wait" as const,
+              logSnippet,
+            };
+          }),
+          { concurrency: 3 },
+        );
 
         return {
           number: build.number,

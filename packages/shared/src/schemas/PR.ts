@@ -63,6 +63,7 @@ export class BuildkiteJob extends Schema.Class<BuildkiteJob>("BuildkiteJob")({
   finishedAt: Schema.String.pipe(Schema.NullOr),
   softFailed: Schema.Boolean,
   type: Schema.Literals(["command", "block", "wait", "trigger"] as const),
+  logSnippet: Schema.String.pipe(Schema.NullOr),
 }) {}
 
 export class BuildkiteBuild extends Schema.Class<BuildkiteBuild>(

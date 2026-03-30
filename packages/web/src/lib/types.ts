@@ -37,6 +37,7 @@ export interface BuildkiteJob {
   finishedAt: string | null;
   softFailed: boolean;
   type: "command" | "block" | "wait" | "trigger";
+  logSnippet: string | null;
 }
 
 export interface BuildkiteBuild {

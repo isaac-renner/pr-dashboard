@@ -167,16 +167,21 @@ export const SIDEBAR_SECTIONS: ReadonlyArray<SidebarSectionDef> = [
           {visibleJobs.length > 0 && (
             <div className="bk-jobs">
               {visibleJobs.map((job) => (
-                <div key={job.id} className={`bk-job ${jobStateClass(job.state, job.softFailed)}`}>
-                  <span className="bk-job-state">{jobStateLabel(job.state, job.softFailed)}</span>
-                  {job.url ? (
-                    <a href={job.url} target="_blank" rel="noreferrer" className="bk-job-label">
-                      {job.label || "step"}
-                    </a>
-                  ) : (
-                    <span className="bk-job-label">{job.label || "step"}</span>
+                <React.Fragment key={job.id}>
+                  <div className={`bk-job ${jobStateClass(job.state, job.softFailed)}`}>
+                    <span className="bk-job-state">{jobStateLabel(job.state, job.softFailed)}</span>
+                    {job.url ? (
+                      <a href={job.url} target="_blank" rel="noreferrer" className="bk-job-label">
+                        {job.label || "step"}
+                      </a>
+                    ) : (
+                      <span className="bk-job-label">{job.label || "step"}</span>
+                    )}
+                  </div>
+                  {job.logSnippet && (
+                    <pre className="bk-log-snippet">{job.logSnippet}</pre>
                   )}
-                </div>
+                </React.Fragment>
               ))}
             </div>
           )}
