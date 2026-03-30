@@ -84,9 +84,7 @@ body {
   line-height: var(--line-height);
   background: var(--bg);
   color: var(--text);
-  padding: calc(var(--line-height) / 2) 2ch calc(var(--line-height) * 3) 2ch;
-  scroll-padding-bottom: calc(var(--line-height) * 3);
-  min-height: 100vh;
+  margin: 0;
   width: round(down, 100%, 1ch);
   font-variant-numeric: tabular-nums lining-nums;
 }
@@ -316,10 +314,7 @@ kbd {
 /* ── Floating bar (bottom of viewport) ── */
 
 .floating-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   height: calc(var(--line-height) * 2);
   line-height: calc(var(--line-height) * 2);
   background: var(--bg);
@@ -517,20 +512,44 @@ tr.selected td a {
   }
 }
 
-/* ── App layout (sidebar support) ── */
+/* ── Shell — top-level viewport layout ── */
 
-.app-layout {
+.shell {
+  height: 100vh;
   display: flex;
-  gap: 0;
-  align-items: flex-start;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.app-main {
+.shell > * + * { margin-top: 0; }
+
+.shell-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--line-height) / 2) 2ch 0 2ch;
+}
+
+.shell-content > * + * { margin-top: var(--line-height); }
+
+.shell-scroll {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  margin-top: var(--line-height);
+}
+
+.shell-scroll > * + * { margin-top: 0; }
+
+.shell-main {
   flex: 1;
   min-width: 0;
+  overflow-y: auto;
 }
 
-.app-main > * + * {
+.shell-main > * + * {
   margin-top: var(--line-height);
 }
 
@@ -539,16 +558,8 @@ tr.selected td a {
 .sidebar {
   width: 40ch;
   flex-shrink: 0;
-  border-left: var(--border) solid var(--border-color);
-  border-right: var(--border) solid var(--border-color);
-  border-top: var(--border) solid var(--border-color);
-  border-bottom: var(--border) solid var(--border-color);
-  min-height: calc(100vh - var(--line-height) * 3);
+  border: var(--border) solid var(--border-color);
   overflow-y: auto;
-  position: sticky;
-  top: calc(var(--line-height) / 2);
-  max-height: calc(100vh - var(--line-height) * 3);
-  margin-top: 0;
   margin-left: calc(var(--border) * -1);
 }
 
@@ -563,6 +574,13 @@ tr.selected td a {
 .sidebar-header {
   font-weight: 600;
   padding: 0 1ch;
+}
+
+.sidebar-conflict-banner {
+  padding: calc(var(--line-height) / 2) 1ch;
+  background: var(--bk-red);
+  color: #fff;
+  font-weight: 600;
 }
 
 .sidebar-section {
@@ -924,8 +942,8 @@ a.bk-step:hover .bk-step-label {
 /* ── Responsive ── */
 
 @media (max-width: 720px) {
-  body {
-    padding: calc(var(--line-height) / 2) 1ch calc(var(--line-height) * 3) 1ch;
+  .shell-content {
+    padding: calc(var(--line-height) / 2) 1ch 0 1ch;
   }
 
   /* Filter bar stacks vertically */
@@ -934,12 +952,11 @@ a.bk-step:hover .bk-step-label {
   }
 
   /* Sidebar goes full width below content */
-  .app-layout {
+  .shell-scroll {
     flex-direction: column;
   }
   .sidebar {
     width: 100%;
-    position: static;
     max-height: none;
     min-height: auto;
     border-left: none;

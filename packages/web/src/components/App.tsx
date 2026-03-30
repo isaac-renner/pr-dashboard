@@ -42,21 +42,21 @@ export function App() {
   const error = AsyncResult.isFailure(response) ? String(response.cause) : null;
 
   return (
-    <>
-      <FilterBar filterInputRef={filterInputRef} filterRefs={filterRefs} />
-
-      <div className="app-layout">
-        <div className="app-main">
-          {loading && !prs.length && <div className="flex"><div className="spinner" /> Loading...</div>}
-          {error && <div>Error: {error}</div>}
-          {!loading && !error && <PRList />}
+    <div className="shell">
+      <div className="shell-content">
+        <FilterBar filterInputRef={filterInputRef} filterRefs={filterRefs} />
+        <div className="shell-scroll">
+          <div className="shell-main">
+            {loading && !prs.length && <div className="flex"><div className="spinner" /> Loading...</div>}
+            {error && <div>Error: {error}</div>}
+            {!loading && !error && <PRList />}
+          </div>
+          <Sidebar />
         </div>
-        <Sidebar />
       </div>
-
       <FloatingBar pending={pending} shortcuts={shortcuts} />
       <ShortcutHelp open={helpOpen} onClose={() => setHelpOpen(false)} shortcuts={shortcuts} />
       <ActionsModal pr={selectedPR} open={actionsOpen} onClose={() => setActionsOpen(false)} />
-    </>
+    </div>
   );
 }

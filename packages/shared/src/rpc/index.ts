@@ -1,4 +1,7 @@
 export {
+  BuildkiteActionResponse,
+  BuildkiteRebuildResponse,
+  MergeResponse,
   PrDashboardRpc,
   PRRemoved,
   PrsResponse,

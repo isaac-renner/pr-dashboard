@@ -19,7 +19,11 @@ export function Sidebar() {
           </a>
         </div>
 
-        <MergeButton pr={pr} />
+        {pr.mergeable === "CONFLICTING" && (
+          <div className="sidebar-conflict-banner">
+            Merge conflicts — resolve before merging
+          </div>
+        )}
 
         {SIDEBAR_SECTIONS.map((section) => {
           const content = section.render(pr);
@@ -33,6 +37,8 @@ export function Sidebar() {
             </div>
           );
         })}
+
+        <MergeButton pr={pr} />
       </div>
     </div>
   );

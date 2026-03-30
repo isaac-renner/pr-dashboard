@@ -1,28 +1,33 @@
 /**
  * Server entry point.
  *
- * Creates a ManagedRuntime from the service layers, then uses it to
- * run Effects from Bun.serve() handlers and periodic refresh.
+ * Uses Effect's HttpRouter + RPC server to provide typed endpoints.
+ * The RPC contract is defined in @pr-dashboard/shared/rpc.
+ * Bun.serve() receives a web handler produced by HttpRouter.toWebHandler().
  */
 
 import { BuildkiteClient, BuildkiteClientLive, parseBuildkiteUrl } from "@pr-dashboard/buildkite";
 import { GitHubGraphQLClientLive } from "@pr-dashboard/github-graphql";
 import type { PR, SessionRef } from "@pr-dashboard/shared";
-import { Effect, Layer, ManagedRuntime } from "effect";
+import { PrDashboardRpc } from "@pr-dashboard/shared";
+import { Effect, Layer, Ref, Schedule, ServiceMap, Stream } from "effect";
+import * as HttpRouter from "effect/unstable/http/HttpRouter";
+import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
+import { RpcServer, RpcSerialization } from "effect/unstable/rpc";
 import { GitHubClient, GitHubClientLive } from "./services/GitHubClient.js";
 import { OpenCodeClient, OpenCodeClientLive } from "./services/OpenCodeClient.js";
 import { PRStore, PRStoreLive } from "./services/PRStore.js";
 
 const PORT = Number(process.env.PORT ?? 3333);
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes — gentler on GitHub rate limits
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 // -----------------------------------------------------------------------------
-// Layer composition
+// Layer composition — services
 // -----------------------------------------------------------------------------
 
 const GitHubLayer = Layer.provide(GitHubClientLive, GitHubGraphQLClientLive);
 
-const MainLayer = Layer.mergeAll(
+const ServicesLayer = Layer.mergeAll(
   PRStoreLive,
   GitHubLayer,
   OpenCodeClientLive,
@@ -30,43 +35,39 @@ const MainLayer = Layer.mergeAll(
 );
 
 // -----------------------------------------------------------------------------
-// Runtime + shared state
+// Refresh state — encapsulated in Effect Refs instead of mutable globals
 // -----------------------------------------------------------------------------
 
-const runtime = ManagedRuntime.make(MainLayer);
-
-// Plain mutable state — these are only touched by the refresh/response
-// effects which are serialized through the runtime.
-let sessionCache = new Map<string, ReadonlyArray<SessionRef>>();
-let reviewRequestedCache: PR[] = [];
-let lastRefreshed: string | null = null;
-let refreshing = false;
-
-// -----------------------------------------------------------------------------
-// SSE — connected clients
-// -----------------------------------------------------------------------------
-
-const sseClients = new Set<ReadableStreamDefaultController>();
-const sseEncoder = new TextEncoder();
-
-function broadcastSSE(event: string, data: unknown) {
-  const msg = sseEncoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-  for (const controller of sseClients) {
-    try {
-      controller.enqueue(msg);
-    } catch {
-      sseClients.delete(controller);
-    }
-  }
+interface RefreshStateShape {
+  readonly sessionCache: Ref.Ref<Map<string, ReadonlyArray<SessionRef>>>;
+  readonly reviewRequestedCache: Ref.Ref<PR[]>;
+  readonly lastRefreshed: Ref.Ref<string | null>;
+  readonly refreshing: Ref.Ref<boolean>;
 }
+
+class RefreshState extends ServiceMap.Service<RefreshState, RefreshStateShape>()(
+  "RefreshState",
+) {}
+
+const RefreshStateLive = Layer.effect(RefreshState)(
+  Effect.gen(function*() {
+    const sessionCache = yield* Ref.make(new Map<string, ReadonlyArray<SessionRef>>());
+    const reviewRequestedCache = yield* Ref.make<PR[]>([]);
+    const lastRefreshed = yield* Ref.make<string | null>(null);
+    const refreshing = yield* Ref.make(false);
+    return { sessionCache, reviewRequestedCache, lastRefreshed, refreshing };
+  }),
+);
 
 // -----------------------------------------------------------------------------
 // Refresh logic
 // -----------------------------------------------------------------------------
 
 const refreshCache = Effect.gen(function*() {
-  if (refreshing) return;
-  refreshing = true;
+  const state = yield* Effect.service(RefreshState);
+  const isRefreshing = yield* Ref.get(state.refreshing);
+  if (isRefreshing) return;
+  yield* Ref.set(state.refreshing, true);
 
   try {
     const prStore = yield* Effect.service(PRStore);
@@ -74,34 +75,36 @@ const refreshCache = Effect.gen(function*() {
     const opencode = yield* Effect.service(OpenCodeClient);
     const buildkite = yield* Effect.service(BuildkiteClient);
 
-    // Fetch PRs — on failure, keep the existing store contents
+    // Fetch PRs — on failure, keep existing
+    const currentReviewReq = yield* Ref.get(state.reviewRequestedCache);
     const result = yield* github.fetchAllOpenPRs.pipe(
       Effect.catch((err) =>
         Effect.gen(function*() {
           yield* Effect.logWarning(`GitHub fetch failed: ${err.message}`);
           const existing = yield* prStore.getAll;
-          return { myPRs: existing, reviewRequested: reviewRequestedCache };
+          return { myPRs: existing, reviewRequested: currentReviewReq };
         })
       ),
     );
     yield* prStore.replaceAll(result.myPRs);
-    reviewRequestedCache = [...result.reviewRequested];
+    yield* Ref.set(state.reviewRequestedCache, [...result.reviewRequested]);
 
-    // Correlate sessions — on failure, keep the old cache
+    // Correlate sessions — on failure, keep old cache
     if (opencode.enabled) {
       const allPrs = yield* prStore.getAll;
+      const currentSessions = yield* Ref.get(state.sessionCache);
       const correlations = yield* opencode.correlateWithPRs(allPrs).pipe(
         Effect.catch(() =>
           Effect.gen(function*() {
             yield* Effect.logWarning("OpenCode fetch failed, keeping old session cache");
-            return sessionCache as ReadonlyMap<string, ReadonlyArray<SessionRef>>;
+            return currentSessions as ReadonlyMap<string, ReadonlyArray<SessionRef>>;
           })
         ),
       );
-      sessionCache = new Map(correlations);
+      yield* Ref.set(state.sessionCache, new Map(correlations));
     }
 
-    // Enrich with Buildkite build details — on failure, keep PRs without build data
+    // Enrich with Buildkite build details
     if (buildkite.enabled) {
       const allPrs = yield* prStore.getAll;
       const withBkUrl = allPrs.filter((pr) => pr.pipelineUrl && parseBuildkiteUrl(pr.pipelineUrl));
@@ -129,8 +132,9 @@ const refreshCache = Effect.gen(function*() {
       yield* Effect.log(`Buildkite: enriched ${bkEnriched} PRs with build details`);
 
       // Also enrich reviewRequested PRs
-      reviewRequestedCache = yield* Effect.forEach(
-        reviewRequestedCache,
+      const reviewReq = yield* Ref.get(state.reviewRequestedCache);
+      const enrichedReview = yield* Effect.forEach(
+        reviewReq,
         (pr) => {
           if (!pr.pipelineUrl || !parseBuildkiteUrl(pr.pipelineUrl)) {
             return Effect.succeed(pr);
@@ -142,190 +146,287 @@ const refreshCache = Effect.gen(function*() {
         },
         { concurrency: 5 },
       );
+      yield* Ref.set(state.reviewRequestedCache, enrichedReview);
       yield* prStore.replaceAll(enriched);
     }
 
-    lastRefreshed = new Date().toISOString();
+    yield* Ref.set(state.lastRefreshed, new Date().toISOString());
 
     const count = (yield* prStore.getAll).length;
-    yield* Effect.log(`Cache refreshed: ${count} PRs, ${sessionCache.size} with sessions`);
-
-    // Notify all connected SSE clients that fresh data is available
-    broadcastSSE("refresh", { lastRefreshed, count });
+    const sessions = (yield* Ref.get(state.sessionCache)).size;
+    yield* Effect.log(`Cache refreshed: ${count} PRs, ${sessions} with sessions`);
   } finally {
-    refreshing = false;
+    yield* Ref.set(state.refreshing, false);
   }
 }).pipe(Effect.withSpan("server.refreshCache"));
 
 // -----------------------------------------------------------------------------
-// Build API response
+// Build API response — enriches PRs with sessions
 // -----------------------------------------------------------------------------
 
-function enrichWithSessions(prs: ReadonlyArray<PR>) {
+function enrichWithSessions(
+  prs: ReadonlyArray<PR>,
+  sessions: Map<string, ReadonlyArray<SessionRef>>,
+) {
   return prs
     .filter((pr: PR) => pr.state === "OPEN")
     .map((pr: PR) => ({
       ...pr,
-      sessions: sessionCache.get(pr.url) ?? [],
+      sessions: sessions.get(pr.url) ?? [],
     }))
     .sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
 }
 
-const buildPrsResponse = Effect.gen(function*() {
-  const prStore = yield* Effect.service(PRStore);
-  const allPrs = yield* prStore.getAll;
+// -----------------------------------------------------------------------------
+// RPC handlers
+// -----------------------------------------------------------------------------
 
-  return {
-    prs: enrichWithSessions(allPrs),
-    reviewRequested: enrichWithSessions(reviewRequestedCache),
-    lastRefreshed,
-  };
-}).pipe(Effect.withSpan("server.buildPrsResponse"));
+const HandlersLayer = PrDashboardRpc.toLayer(
+  Effect.gen(function*() {
+    const prStore = yield* Effect.service(PRStore);
+    const github = yield* Effect.service(GitHubClient);
+    const buildkite = yield* Effect.service(BuildkiteClient);
+    const state = yield* Effect.service(RefreshState);
+
+    return PrDashboardRpc.of({
+      getPrs: () =>
+        Effect.gen(function*() {
+          const allPrs = yield* prStore.getAll;
+          const sessions = yield* Ref.get(state.sessionCache);
+          const reviewReq = yield* Ref.get(state.reviewRequestedCache);
+          const lastRef = yield* Ref.get(state.lastRefreshed);
+          return {
+            prs: enrichWithSessions(allPrs, sessions),
+            reviewRequested: enrichWithSessions(reviewReq, sessions),
+            lastRefreshed: lastRef,
+          };
+        }).pipe(Effect.withSpan("rpc.getPrs")),
+
+      refresh: () =>
+        Effect.gen(function*() {
+          yield* refreshCache;
+          const lastRef = yield* Ref.get(state.lastRefreshed);
+          return { ok: true as const, lastRefreshed: lastRef };
+        }).pipe(Effect.withSpan("rpc.refresh")),
+
+      merge: ({ owner, repo, number }) =>
+        Effect.gen(function*() {
+          const result = yield* github.mergePR(owner, repo, number).pipe(Effect.orDie);
+          yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
+          return {
+            merged: result.merged,
+            message: result.message,
+            sha: result.sha ?? null,
+          };
+        }).pipe(Effect.withSpan("rpc.merge")),
+
+      streamPrUpdates: () =>
+        prStore.changes.pipe(
+          Stream.map((event) =>
+            event._tag === "upserted"
+              ? { _tag: "PRUpserted" as const, pr: event.pr }
+              : { _tag: "PRRemoved" as const, url: event.url }
+          ),
+        ),
+
+      unblockStep: ({ id }) =>
+        Effect.gen(function*() {
+          const result = yield* buildkite.unblockStep(id).pipe(Effect.orDie);
+          yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
+          return { ok: true as const, state: result.state };
+        }).pipe(Effect.withSpan("rpc.unblockStep")),
+
+      retryJob: ({ id }) =>
+        Effect.gen(function*() {
+          const result = yield* buildkite.retryJob(id).pipe(Effect.orDie);
+          yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
+          return { ok: true as const, state: result.state };
+        }).pipe(Effect.withSpan("rpc.retryJob")),
+
+      rebuildBuild: ({ id }) =>
+        Effect.gen(function*() {
+          const result = yield* buildkite.rebuildBuild(id).pipe(Effect.orDie);
+          yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
+          return {
+            ok: true as const,
+            number: result.number,
+            url: result.url,
+            state: result.state,
+          };
+        }).pipe(Effect.withSpan("rpc.rebuildBuild")),
+    });
+  })
+);
+
+// -----------------------------------------------------------------------------
+// RPC server layer — registers typed routes on the HttpRouter
+// -----------------------------------------------------------------------------
+
+const RpcLayer = RpcServer.layerHttp({
+  group: PrDashboardRpc,
+  path: "/rpc",
+  protocol: "http",
+});
+
+// -----------------------------------------------------------------------------
+// Static / Vite proxy — catch-all route for non-RPC paths
+// -----------------------------------------------------------------------------
+
+import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
+
+const CompatLayer = HttpRouter.use((router) =>
+  Effect.gen(function*() {
+    const prStore = yield* Effect.service(PRStore);
+    const state = yield* Effect.service(RefreshState);
+
+    // Backward-compatible JSON endpoints for the frontend
+    yield* router.add("GET", "/api/prs", () =>
+      Effect.gen(function*() {
+        const allPrs = yield* prStore.getAll;
+        const sessions = yield* Ref.get(state.sessionCache);
+        const reviewReq = yield* Ref.get(state.reviewRequestedCache);
+        const lastRef = yield* Ref.get(state.lastRefreshed);
+        const body = {
+          prs: enrichWithSessions(allPrs, sessions),
+          reviewRequested: enrichWithSessions(reviewReq, sessions),
+          lastRefreshed: lastRef,
+        };
+        return yield* HttpServerResponse.json(body);
+      }),
+    );
+
+    yield* router.add("POST", "/api/refresh", () =>
+      Effect.gen(function*() {
+        yield* refreshCache;
+        const lastRef = yield* Ref.get(state.lastRefreshed);
+        return yield* HttpServerResponse.json({ ok: true, lastRefreshed: lastRef });
+      }),
+    );
+
+    yield* router.add("POST", "/api/merge", () =>
+      Effect.gen(function*() {
+        const req = yield* Effect.service(HttpServerRequest.HttpServerRequest);
+        const webReq = yield* HttpServerRequest.toWeb(req);
+        const body = yield* Effect.tryPromise({
+          try: () => webReq.json() as Promise<{ owner: string; repo: string; number: number }>,
+          catch: () => new Error("Invalid JSON"),
+        }).pipe(Effect.orDie);
+        const github = yield* Effect.service(GitHubClient);
+        const result = yield* github.mergePR(body.owner, body.repo, body.number).pipe(Effect.orDie);
+        yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
+        return yield* HttpServerResponse.json(result);
+      }),
+    );
+  }),
+);
+
+const StaticLayer = HttpRouter.use((router) =>
+  Effect.gen(function*() {
+    yield* router.add("*", "/*", () =>
+      Effect.gen(function*() {
+        const req = yield* Effect.service(HttpServerRequest.HttpServerRequest);
+        const webReq = yield* HttpServerRequest.toWeb(req);
+        const url = new URL(webReq.url);
+
+        // Dev: proxy to Vite
+        if (process.env.NODE_ENV !== "production") {
+          const viteRes = yield* Effect.tryPromise({
+            try: () => {
+              const viteUrl = `http://localhost:5173${url.pathname}${url.search}`;
+              return fetch(viteUrl, {
+                method: webReq.method,
+                headers: webReq.headers,
+                body: webReq.method !== "GET" && webReq.method !== "HEAD"
+                  ? webReq.body
+                  : null,
+              });
+            },
+            catch: () => null,
+          });
+          if (viteRes) return HttpServerResponse.fromWeb(viteRes);
+        }
+
+        // Production: serve Vite build output
+        const STATIC_DIR = process.env.STATIC_DIR
+          ?? new URL("../../web/dist", import.meta.url).pathname;
+        const filePath = url.pathname === "/" ? "/index.html" : url.pathname;
+        const file = Bun.file(STATIC_DIR + filePath);
+        const fileExists = yield* Effect.promise(() => file.exists());
+        if (fileExists) {
+          return HttpServerResponse.fromWeb(new Response(file));
+        }
+
+        // SPA fallback
+        const index = Bun.file(STATIC_DIR + "/index.html");
+        const indexExists = yield* Effect.promise(() => index.exists());
+        if (indexExists) {
+          return HttpServerResponse.fromWeb(new Response(index));
+        }
+
+        return HttpServerResponse.empty({ status: 404 });
+      }),
+    );
+  }),
+);
+
+// -----------------------------------------------------------------------------
+// Background refresh — runs as a daemon fiber in the layer scope
+// -----------------------------------------------------------------------------
+
+const BackgroundRefreshLayer = Layer.effectDiscard(
+  Effect.gen(function*() {
+    yield* refreshCache;
+    yield* Effect.log(`Background refresh every ${REFRESH_INTERVAL_MS / 1000}s`);
+    yield* refreshCache.pipe(
+      Effect.schedule(Schedule.fixed(REFRESH_INTERVAL_MS)),
+      Effect.forkDetach,
+    );
+  }),
+);
+
+// -----------------------------------------------------------------------------
+// Full application layer
+// -----------------------------------------------------------------------------
+
+// Services + state must be provided first, then handlers + RPC + background
+const CoreLayer = Layer.mergeAll(
+  ServicesLayer,
+  RefreshStateLive,
+);
+
+// HandlersLayer needs services; RpcLayer needs handlers + serialization
+const HandlersWithDeps = Layer.provide(HandlersLayer, CoreLayer);
+const SerializationLayer = RpcSerialization.layerNdjson;
+
+const RpcWithDeps = Layer.provide(
+  RpcLayer,
+  Layer.mergeAll(HandlersWithDeps, SerializationLayer),
+);
+
+const AppLayer = Layer.mergeAll(
+  RpcWithDeps,
+  Layer.provide(CompatLayer, CoreLayer),
+  StaticLayer,
+  Layer.provide(BackgroundRefreshLayer, CoreLayer),
+);
 
 // -----------------------------------------------------------------------------
 // Startup
 // -----------------------------------------------------------------------------
 
-async function main() {
-  // Start HTTP server FIRST so it's ready when the frontend connects
-  const server = Bun.serve({
-    hostname: "0.0.0.0",
-    port: PORT,
-    idleTimeout: 255, // max — SSE connections are long-lived
-    async fetch(req) {
-      const url = new URL(req.url);
+const { handler, dispose } = HttpRouter.toWebHandler(AppLayer);
 
-      if (url.pathname === "/api/prs") {
-        try {
-          const data = await runtime.runPromise(buildPrsResponse);
-          return Response.json(data);
-        } catch (err) {
-          console.error("GET /api/prs failed:", err);
-          return Response.json({ error: String(err) }, { status: 500 });
-        }
-      }
+const server = Bun.serve({
+  hostname: "0.0.0.0",
+  port: PORT,
+  idleTimeout: 255,
+  fetch: (req: Request) => handler(req, undefined as any),
+});
 
-      if (url.pathname === "/api/refresh" && req.method === "POST") {
-        try {
-          await runtime.runPromise(refreshCache);
-          return Response.json({ ok: true, lastRefreshed });
-        } catch (err) {
-          console.error("POST /api/refresh failed:", err);
-          return Response.json({ error: String(err) }, { status: 500 });
-        }
-      }
+console.log(`PR Dashboard running at http://0.0.0.0:${server.port}`);
 
-      if (url.pathname === "/api/merge" && req.method === "POST") {
-        try {
-          const body = await req.json() as { owner?: string; repo?: string; number?: number };
-          if (!body.owner || !body.repo || !body.number) {
-            return Response.json({ error: "Missing owner, repo, or number" }, { status: 400 });
-          }
-          const result = await runtime.runPromise(
-            Effect.gen(function*() {
-              const github = yield* Effect.service(GitHubClient);
-              return yield* github.mergePR(body.owner!, body.repo!, body.number!);
-            })
-          );
-          // Refresh cache after merge so the PR disappears from the list
-          runtime.runPromise(refreshCache).catch((err) => console.error("Post-merge refresh failed:", err));
-          return Response.json(result);
-        } catch (err: any) {
-          console.error("POST /api/merge failed:", err);
-          const message = err?.message ?? String(err);
-          return Response.json({ error: message }, { status: 422 });
-        }
-      }
-
-      // SSE: push "refresh" notifications to connected clients
-      if (url.pathname === "/api/events") {
-        const stream = new ReadableStream({
-          start(controller) {
-            sseClients.add(controller);
-
-            // Send initial heartbeat so the client knows the connection is live
-            const msg = sseEncoder.encode(`event: heartbeat\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`);
-            controller.enqueue(msg);
-
-            // Keep-alive: send a heartbeat every 30s to prevent proxies from closing
-            const heartbeatInterval = setInterval(() => {
-              try {
-                controller.enqueue(sseEncoder.encode(`event: heartbeat\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`));
-              } catch {
-                clearInterval(heartbeatInterval);
-                sseClients.delete(controller);
-              }
-            }, 30_000);
-
-            req.signal.addEventListener("abort", () => {
-              clearInterval(heartbeatInterval);
-              sseClients.delete(controller);
-              controller.close();
-            });
-          },
-        });
-
-        return new Response(stream, {
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-        });
-      }
-
-      // Dev: proxy to Vite dev server
-      if (process.env.NODE_ENV !== "production") {
-        try {
-          const viteUrl = `http://localhost:5173${url.pathname}${url.search}`;
-          const viteRes = await fetch(viteUrl, {
-            method: req.method,
-            headers: req.headers,
-            body: req.method !== "GET" && req.method !== "HEAD"
-              ? (req.body ?? null)
-              : null,
-          });
-          return new Response(viteRes.body, {
-            status: viteRes.status,
-            headers: viteRes.headers,
-          });
-        } catch {
-          // Vite not running — fall through to static serving
-        }
-      }
-
-      // Production: serve Vite build output
-      const STATIC_DIR = process.env.STATIC_DIR
-        ?? new URL("../../web/dist", import.meta.url).pathname;
-      const filePath = url.pathname === "/" ? "/index.html" : url.pathname;
-      const file = Bun.file(STATIC_DIR + filePath);
-      if (await file.exists()) return new Response(file);
-
-      // SPA fallback: serve index.html for non-file routes
-      const index = Bun.file(STATIC_DIR + "/index.html");
-      if (await index.exists()) return new Response(index);
-
-      return new Response("Not found", { status: 404 });
-    },
-  });
-
-  console.log(`PR Dashboard running at http://0.0.0.0:${server.port}`);
-
-  // Now backfill — server is already accepting requests.
-  // GET /api/prs will return { prs: [], lastRefreshed: null } until this completes.
-  await runtime.runPromise(refreshCache);
-
-  // Periodic refresh
-  setInterval(() => {
-    runtime.runPromise(refreshCache).catch((err) => console.error("Background refresh failed:", err));
-  }, REFRESH_INTERVAL_MS);
-
-  console.log(`Background refresh every ${REFRESH_INTERVAL_MS / 1000}s`);
-}
-
-main().catch((err) => {
-  console.error("Server failed to start:", err);
-  process.exit(1);
+process.on("SIGTERM", () => {
+  dispose().then(() => process.exit(0));
 });

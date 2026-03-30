@@ -8,6 +8,7 @@ import { PR, PRWithSessions } from "../schemas/index.js";
 
 export class PrsResponse extends Schema.Class<PrsResponse>("PrsResponse")({
   prs: Schema.Array(PRWithSessions),
+  reviewRequested: Schema.Array(PRWithSessions),
   lastRefreshed: Schema.String.pipe(Schema.NullOr),
 }) {}
 
@@ -18,8 +19,32 @@ export class RefreshResponse extends Schema.Class<RefreshResponse>(
   lastRefreshed: Schema.String.pipe(Schema.NullOr),
 }) {}
 
+export class MergeResponse extends Schema.Class<MergeResponse>(
+  "MergeResponse",
+)({
+  merged: Schema.Boolean,
+  message: Schema.String,
+  sha: Schema.String.pipe(Schema.NullOr),
+}) {}
+
+export class BuildkiteActionResponse extends Schema.Class<BuildkiteActionResponse>(
+  "BuildkiteActionResponse",
+)({
+  ok: Schema.Boolean,
+  state: Schema.String,
+}) {}
+
+export class BuildkiteRebuildResponse extends Schema.Class<BuildkiteRebuildResponse>(
+  "BuildkiteRebuildResponse",
+)({
+  ok: Schema.Boolean,
+  number: Schema.Number,
+  url: Schema.String,
+  state: Schema.String,
+}) {}
+
 // -----------------------------------------------------------------------------
-// PR update events — streamed from server to client via SSE
+// PR update events — streamed from server to client
 // -----------------------------------------------------------------------------
 
 export class PRUpserted extends Schema.TaggedClass<PRUpserted>()(
@@ -37,9 +62,6 @@ export type PRUpdateEvent = typeof PRUpdateEvent.Type;
 
 // -----------------------------------------------------------------------------
 // RPC group — the type-safe contract between frontend and backend
-//
-// Filtering, grouping, bucketing all happen client-side in derived atoms.
-// The server sends the full dataset — it's small enough (~50-100 PRs).
 // -----------------------------------------------------------------------------
 
 export class PrDashboardRpc extends RpcGroup.make(
@@ -49,8 +71,28 @@ export class PrDashboardRpc extends RpcGroup.make(
   Rpc.make("refresh", {
     success: RefreshResponse,
   }),
+  Rpc.make("merge", {
+    payload: {
+      owner: Schema.String,
+      repo: Schema.String,
+      number: Schema.Number,
+    },
+    success: MergeResponse,
+  }),
   Rpc.make("streamPrUpdates", {
     success: PRUpdateEvent,
     stream: true,
+  }),
+  Rpc.make("unblockStep", {
+    payload: { id: Schema.String },
+    success: BuildkiteActionResponse,
+  }),
+  Rpc.make("retryJob", {
+    payload: { id: Schema.String },
+    success: BuildkiteActionResponse,
+  }),
+  Rpc.make("rebuildBuild", {
+    payload: { id: Schema.String },
+    success: BuildkiteRebuildResponse,
   }),
 ) {}

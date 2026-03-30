@@ -1,9 +1,20 @@
 import React, { useCallback, useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
+import { PrDashboardRpc } from "@pr-dashboard/shared";
+import { Layer, Scope } from "effect";
+import * as Effect from "effect/Effect";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
 import { prsResponseAtom } from "../atoms/prs.js";
 import type { PR } from "../lib/types.js";
 
 type MergeState = "idle" | "confirm" | "merging" | "merged" | "error";
+
+const ClientLayer = Layer.mergeAll(
+  RpcClient.layerProtocolHttp({ url: "/rpc" }),
+  FetchHttpClient.layer,
+  RpcSerialization.layerNdjson,
+);
 
 function getBlockingReasons(pr: PR): string[] {
   const reasons: string[] = [];
@@ -42,20 +53,14 @@ export function MergeButton({ pr }: { pr: PR }) {
       const [owner, repo] = pr.repository.nameWithOwner.split("/");
 
       try {
-        const res = await fetch("/api/merge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ owner, repo, number: pr.number }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          setState("error");
-          setError(data.error ?? `Merge failed (${res.status})`);
-          return;
-        }
-
+        await Effect.gen(function*() {
+          const client = yield* RpcClient.make(PrDashboardRpc);
+          yield* client.merge({ owner: owner!, repo: repo!, number: pr.number });
+        }).pipe(
+          Effect.scoped,
+          Effect.provide(ClientLayer),
+          Effect.runPromise,
+        );
         setState("merged");
       } catch (err) {
         setState("error");
