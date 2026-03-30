@@ -4,6 +4,9 @@
  * prsAtom: async atom that fetches from /api/prs on mount.
  * lastRefreshedAtom: derived from prsAtom response.
  * refreshAtom: callable atom that triggers POST /api/refresh then re-fetches.
+ *
+ * An SSE connection to /api/events streams incremental updates (upserted /
+ * removed) so the UI stays fresh without polling.
  */
 
 import { Data } from "effect";
@@ -65,6 +68,16 @@ export const refreshAtom = Atom.fn((_: void, ctx) =>
       try: () => fetch("/api/refresh", { method: "POST" }),
       catch: (cause) => new RefreshError({ cause }),
     });
+    ctx.refresh(prsResponseAtom);
+  })
+);
+
+// ---------------------------------------------------------------------------
+// SSE refresh trigger — callable atom that just re-fetches prsResponseAtom
+// ---------------------------------------------------------------------------
+
+export const sseRefreshAtom = Atom.fn((_: void, ctx) =>
+  Effect.sync(() => {
     ctx.refresh(prsResponseAtom);
   })
 );

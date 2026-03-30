@@ -41,6 +41,24 @@ let lastRefreshed: string | null = null;
 let refreshing = false;
 
 // -----------------------------------------------------------------------------
+// SSE — connected clients
+// -----------------------------------------------------------------------------
+
+const sseClients = new Set<ReadableStreamDefaultController>();
+const sseEncoder = new TextEncoder();
+
+function broadcastSSE(event: string, data: unknown) {
+  const msg = sseEncoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  for (const controller of sseClients) {
+    try {
+      controller.enqueue(msg);
+    } catch {
+      sseClients.delete(controller);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Refresh logic
 // -----------------------------------------------------------------------------
 
@@ -84,6 +102,9 @@ const refreshCache = Effect.gen(function*() {
 
     const count = (yield* prStore.getAll).length;
     yield* Effect.log(`Cache refreshed: ${count} PRs, ${sessionCache.size} with sessions`);
+
+    // Notify all connected SSE clients that fresh data is available
+    broadcastSSE("refresh", { lastRefreshed, count });
   } finally {
     refreshing = false;
   }
@@ -146,6 +167,43 @@ async function main() {
           console.error("POST /api/refresh failed:", err);
           return Response.json({ error: String(err) }, { status: 500 });
         }
+      }
+
+      // SSE: push "refresh" notifications to connected clients
+      if (url.pathname === "/api/events") {
+        const stream = new ReadableStream({
+          start(controller) {
+            sseClients.add(controller);
+
+            // Send initial heartbeat so the client knows the connection is live
+            const msg = sseEncoder.encode(`event: heartbeat\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`);
+            controller.enqueue(msg);
+
+            // Keep-alive: send a heartbeat every 30s to prevent proxies from closing
+            const heartbeatInterval = setInterval(() => {
+              try {
+                controller.enqueue(sseEncoder.encode(`event: heartbeat\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`));
+              } catch {
+                clearInterval(heartbeatInterval);
+                sseClients.delete(controller);
+              }
+            }, 30_000);
+
+            req.signal.addEventListener("abort", () => {
+              clearInterval(heartbeatInterval);
+              sseClients.delete(controller);
+              controller.close();
+            });
+          },
+        });
+
+        return new Response(stream, {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            Connection: "keep-alive",
+          },
+        });
       }
 
       // Dev: proxy to Vite dev server

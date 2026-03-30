@@ -6,6 +6,7 @@ import { prsAtom, prsResponseAtom } from "../atoms/prs.js";
 import { selectedNavIndexAtom, selectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import { useModals } from "../contexts/ModalContext.js";
 import { useShortcutContext } from "../contexts/ShortcutContext.js";
+import { useSSE } from "../hooks/useSSE.js";
 import { ActionsModal } from "./ActionsModal.js";
 import { FilterBar } from "./FilterBar.js";
 import { FloatingBar } from "./FloatingBar.js";
@@ -14,6 +15,7 @@ import { ShortcutHelp } from "./ShortcutHelp.js";
 import { Sidebar } from "./Sidebar.js";
 
 export function App() {
+  useSSE();
   const response = useAtomValue(prsResponseAtom);
   const prs = useAtomValue(prsAtom);
   const navItems = useAtomValue(navItemsAtom);
