@@ -2,6 +2,7 @@ import { useAtomValue } from "@effect/atom-react";
 import React from "react";
 import { lastSelectedPRAtom, sidebarOpenAtom } from "../atoms/selection.js";
 import { SIDEBAR_SECTIONS } from "../lib/sidebarDefs.js";
+import { MergeButton } from "./MergeButton.js";
 
 export function Sidebar() {
   const open = useAtomValue(sidebarOpenAtom);
@@ -17,6 +18,8 @@ export function Sidebar() {
             <strong>#{pr.number}</strong> {pr.title}
           </a>
         </div>
+
+        <MergeButton pr={pr} />
 
         {SIDEBAR_SECTIONS.map((section) => {
           const content = section.render(pr);

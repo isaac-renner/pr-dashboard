@@ -17,7 +17,7 @@ import {
   SinglePR,
 } from "@pr-dashboard/github-graphql";
 import type { PR } from "@pr-dashboard/shared";
-import { Config, Effect, Layer, ServiceMap } from "effect";
+import { Config, Effect, Layer, Redacted, ServiceMap } from "effect";
 import { enrichGraphQLNode, type GQLNode } from "./Enrichment.js";
 
 // -----------------------------------------------------------------------------
@@ -29,6 +29,12 @@ export interface FetchResult {
   readonly myPRs: ReadonlyArray<PR>;
   /** PRs where review is requested from the current user */
   readonly reviewRequested: ReadonlyArray<PR>;
+}
+
+export interface MergeResult {
+  readonly merged: boolean;
+  readonly message: string;
+  readonly sha: string | undefined;
 }
 
 export interface GitHubClientShape {
@@ -46,6 +52,15 @@ export interface GitHubClientShape {
     repo: string,
     number: number,
   ) => Effect.Effect<PR | null, GraphQLRequestError>;
+
+  /**
+   * Merge a pull request via the GitHub REST API.
+   */
+  readonly mergePR: (
+    owner: string,
+    repo: string,
+    number: number,
+  ) => Effect.Effect<MergeResult, GraphQLRequestError>;
 
   readonly currentUser: string;
 }
@@ -74,6 +89,7 @@ function fragmentToGQLNode(fragment: PrFieldsFragment): GQLNode {
 export const GitHubClientLive = Layer.effect(GitHubClient)(
   Effect.gen(function*() {
     const gql = yield* Effect.service(GitHubGraphQLClient);
+    const token = yield* Config.redacted("GITHUB_TOKEN");
     const currentUser = yield* Config.string("GH_USER").pipe(
       Config.withDefault("isaac-renner"),
     );
@@ -119,6 +135,48 @@ export const GitHubClientLive = Layer.effect(GitHubClient)(
           if (!node) return null;
           return enrichGraphQLNode(fragmentToGQLNode(node), currentUser);
         }).pipe(Effect.withSpan("github.fetchSinglePR")),
+
+      mergePR: (owner, repo, number) =>
+        Effect.gen(function*() {
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              fetch(
+                `https://api.github.com/repos/${owner}/${repo}/pulls/${number}/merge`,
+                {
+                  method: "PUT",
+                  headers: {
+                    Authorization: `Bearer ${Redacted.value(token)}`,
+                    "Content-Type": "application/json",
+                    "User-Agent": "pr-dashboard",
+                    Accept: "application/vnd.github+json",
+                  },
+                  body: JSON.stringify({ merge_method: "squash" }),
+                },
+              ),
+            catch: (error) =>
+              new GraphQLRequestError(`Merge network error: ${error}`),
+          });
+
+          const json = yield* Effect.tryPromise({
+            try: () => response.json() as Promise<{ merged?: boolean; message?: string; sha?: string }>,
+            catch: (error) => new GraphQLRequestError(`Failed to parse merge response: ${error}`),
+          });
+
+          if (!response.ok) {
+            return yield* Effect.fail(
+              new GraphQLRequestError(
+                json.message ?? `Merge failed with status ${response.status}`,
+                response.status,
+              ),
+            );
+          }
+
+          return {
+            merged: json.merged ?? false,
+            message: json.message ?? "Pull request merged",
+            sha: json.sha,
+          };
+        }).pipe(Effect.withSpan("github.mergePR")),
     };
   }),
 );

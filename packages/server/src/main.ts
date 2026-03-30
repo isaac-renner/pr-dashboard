@@ -169,6 +169,28 @@ async function main() {
         }
       }
 
+      if (url.pathname === "/api/merge" && req.method === "POST") {
+        try {
+          const body = await req.json() as { owner?: string; repo?: string; number?: number };
+          if (!body.owner || !body.repo || !body.number) {
+            return Response.json({ error: "Missing owner, repo, or number" }, { status: 400 });
+          }
+          const result = await runtime.runPromise(
+            Effect.gen(function*() {
+              const github = yield* Effect.service(GitHubClient);
+              return yield* github.mergePR(body.owner!, body.repo!, body.number!);
+            })
+          );
+          // Refresh cache after merge so the PR disappears from the list
+          runtime.runPromise(refreshCache).catch((err) => console.error("Post-merge refresh failed:", err));
+          return Response.json(result);
+        } catch (err: any) {
+          console.error("POST /api/merge failed:", err);
+          const message = err?.message ?? String(err);
+          return Response.json({ error: message }, { status: 422 });
+        }
+      }
+
       // SSE: push "refresh" notifications to connected clients
       if (url.pathname === "/api/events") {
         const stream = new ReadableStream({

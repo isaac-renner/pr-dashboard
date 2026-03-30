@@ -608,6 +608,94 @@ tr.selected td a {
   margin-top: calc(var(--line-height) / 4);
 }
 
+/* ── Merge button ── */
+
+.sidebar-merge {
+  padding: 0 1ch;
+  margin-top: var(--line-height);
+}
+
+.sidebar-merge > * + * {
+  margin-top: calc(var(--line-height) / 2);
+}
+
+.merge-btn {
+  width: 100%;
+  background: var(--selection-bg);
+  color: var(--selection-text);
+  border: var(--border) solid var(--border-color);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.merge-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.merge-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.merge-btn-cancel {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: var(--border) solid var(--border-color);
+  cursor: pointer;
+}
+
+.merge-btn-cancel:hover {
+  background: var(--hover);
+}
+
+.merge-confirm > * + * {
+  margin-top: calc(var(--line-height) / 2);
+}
+
+.merge-confirm-actions {
+  display: flex;
+  gap: 1ch;
+}
+
+.merge-confirm-actions > * {
+  flex: 1;
+  margin-top: 0;
+}
+
+.merge-success {
+  display: block;
+  padding: calc(var(--line-height) / 2) 1ch;
+  text-align: center;
+  font-weight: 600;
+  border: var(--border) solid var(--border-color);
+}
+
+.merge-error-wrap > * + * {
+  margin-top: calc(var(--line-height) / 2);
+}
+
+.merge-error {
+  display: block;
+  opacity: 0.8;
+  word-break: break-word;
+}
+
+.merge-blocked-reasons {
+  list-style: none;
+  padding: 0;
+  margin-top: calc(var(--line-height) / 2);
+  opacity: 0.6;
+}
+
+.merge-blocked-reasons > li {
+  margin-top: 0;
+}
+
+.merge-blocked-reasons > li::before {
+  content: "- ";
+}
+
 /* ── Status bar view label ── */
 
 .status-bar-view {
