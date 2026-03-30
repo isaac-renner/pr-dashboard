@@ -276,49 +276,45 @@ const RpcLayer = RpcServer.layerHttp({
 
 import * as HttpServerRequest from "effect/unstable/http/HttpServerRequest";
 
+const getPrsHandler = Effect.gen(function*() {
+  const prStore = yield* Effect.service(PRStore);
+  const state = yield* Effect.service(RefreshState);
+  const allPrs = yield* prStore.getAll;
+  const sessions = yield* Ref.get(state.sessionCache);
+  const reviewReq = yield* Ref.get(state.reviewRequestedCache);
+  const lastRef = yield* Ref.get(state.lastRefreshed);
+  return yield* HttpServerResponse.json({
+    prs: enrichWithSessions(allPrs, sessions),
+    reviewRequested: enrichWithSessions(reviewReq, sessions),
+    lastRefreshed: lastRef,
+  });
+});
+
+const refreshHandler = Effect.gen(function*() {
+  yield* refreshCache;
+  const state = yield* Effect.service(RefreshState);
+  const lastRef = yield* Ref.get(state.lastRefreshed);
+  return yield* HttpServerResponse.json({ ok: true, lastRefreshed: lastRef });
+});
+
+const mergeHandler = Effect.gen(function*() {
+  const req = yield* Effect.service(HttpServerRequest.HttpServerRequest);
+  const webReq = yield* HttpServerRequest.toWeb(req);
+  const body = yield* Effect.tryPromise({
+    try: () => webReq.json() as Promise<{ owner: string; repo: string; number: number }>,
+    catch: () => new Error("Invalid JSON"),
+  }).pipe(Effect.orDie);
+  const github = yield* Effect.service(GitHubClient);
+  const result = yield* github.mergePR(body.owner, body.repo, body.number).pipe(Effect.orDie);
+  yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
+  return yield* HttpServerResponse.json(result);
+});
+
 const CompatLayer = HttpRouter.use((router) =>
   Effect.gen(function*() {
-    const prStore = yield* Effect.service(PRStore);
-    const state = yield* Effect.service(RefreshState);
-
-    // Backward-compatible JSON endpoints for the frontend
-    yield* router.add("GET", "/api/prs", () =>
-      Effect.gen(function*() {
-        const allPrs = yield* prStore.getAll;
-        const sessions = yield* Ref.get(state.sessionCache);
-        const reviewReq = yield* Ref.get(state.reviewRequestedCache);
-        const lastRef = yield* Ref.get(state.lastRefreshed);
-        const body = {
-          prs: enrichWithSessions(allPrs, sessions),
-          reviewRequested: enrichWithSessions(reviewReq, sessions),
-          lastRefreshed: lastRef,
-        };
-        return yield* HttpServerResponse.json(body);
-      }),
-    );
-
-    yield* router.add("POST", "/api/refresh", () =>
-      Effect.gen(function*() {
-        yield* refreshCache;
-        const lastRef = yield* Ref.get(state.lastRefreshed);
-        return yield* HttpServerResponse.json({ ok: true, lastRefreshed: lastRef });
-      }),
-    );
-
-    yield* router.add("POST", "/api/merge", () =>
-      Effect.gen(function*() {
-        const req = yield* Effect.service(HttpServerRequest.HttpServerRequest);
-        const webReq = yield* HttpServerRequest.toWeb(req);
-        const body = yield* Effect.tryPromise({
-          try: () => webReq.json() as Promise<{ owner: string; repo: string; number: number }>,
-          catch: () => new Error("Invalid JSON"),
-        }).pipe(Effect.orDie);
-        const github = yield* Effect.service(GitHubClient);
-        const result = yield* github.mergePR(body.owner, body.repo, body.number).pipe(Effect.orDie);
-        yield* refreshCache.pipe(Effect.ignore, Effect.forkDetach);
-        return yield* HttpServerResponse.json(result);
-      }),
-    );
+    yield* router.add("GET", "/api/prs", () => getPrsHandler);
+    yield* router.add("POST", "/api/refresh", () => refreshHandler);
+    yield* router.add("POST", "/api/merge", () => mergeHandler);
   }),
 );
 
@@ -405,9 +401,13 @@ const RpcWithDeps = Layer.provide(
   Layer.mergeAll(HandlersWithDeps, SerializationLayer),
 );
 
+// CompatLayer handlers look up services at request time, so inject CoreLayer
+// into each request's context via provideRequest.
+const CompatWithDeps = HttpRouter.provideRequest(CoreLayer)(CompatLayer);
+
 const AppLayer = Layer.mergeAll(
   RpcWithDeps,
-  Layer.provide(CompatLayer, CoreLayer),
+  CompatWithDeps,
   StaticLayer,
   Layer.provide(BackgroundRefreshLayer, CoreLayer),
 );
