@@ -171,10 +171,10 @@ export function groupByReview(prs: PR[]): Map<string, PR[]> {
   // Sort groups in a meaningful order: actionable states first
   const order: Record<string, number> = {
     "Changes Requested": 0,
-    "Commented": 1,
-    "Unreviewed": 2,
-    "Draft": 3,
-    "Approved": 4,
+    "Approved": 1,
+    "Commented": 2,
+    "Unreviewed": 3,
+    "Draft": 4,
   };
 
   const sorted = new Map<string, PR[]>();
