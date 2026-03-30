@@ -12,6 +12,9 @@ export const PRFields = graphql(`
     headRefName
     baseRefName
     mergeable
+    author {
+      login
+    }
     repository {
       name
       nameWithOwner

@@ -4,6 +4,7 @@ import { filteredPrsAtom, groupedPrsAtom, navItemsAtom } from "../atoms/derived.
 import { filtersAtom } from "../atoms/filters.js";
 import { closedGroupsAtom, toggleGroup } from "../atoms/groups.js";
 import { selectedNavIndexAtom } from "../atoms/selection.js";
+import { viewModeAtom } from "../atoms/view.js";
 import { timeAgo } from "../lib/format.js";
 import type { PR } from "../lib/types.js";
 import { PRRow } from "./PRRow.js";
@@ -74,6 +75,8 @@ export function PRList() {
   const navItems = useAtomValue(navItemsAtom);
   const selectedNavIndex = useAtomValue(selectedNavIndexAtom);
   const setSelectedNavIndex = useAtomSet(selectedNavIndexAtom);
+  const viewMode = useAtomValue(viewModeAtom);
+  const showAuthor = viewMode === "reviews";
 
   if (filtered.length === 0) {
     return <div className="muted">No PRs match filters</div>;
@@ -101,9 +104,10 @@ export function PRList() {
   }
 
   return (
-    <div className="panel pr-columns">
+    <div className={`panel ${showAuthor ? "pr-columns-author" : "pr-columns"}`}>
       <div className="pr-grid-header">
         <div>PR</div>
+        {showAuthor && <div>Author</div>}
         <div>Review</div>
         <div>Pipeline</div>
         <div>Conflicts</div>
@@ -117,6 +121,7 @@ export function PRList() {
             <PRRow
               key={pr.url}
               pr={pr}
+              showAuthor={showAuthor}
               onClick={() => setSelectedNavIndex(navIndexByKey.get(`pr:${pr.url}`) ?? -1)}
             />
           ));
@@ -145,6 +150,7 @@ export function PRList() {
               <PRRow
                 key={pr.url}
                 pr={pr}
+                showAuthor={showAuthor}
                 onClick={() => setSelectedNavIndex(navIndexByKey.get(`pr:${pr.url}`) ?? -1)}
               />
             ))}

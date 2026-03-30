@@ -471,6 +471,10 @@ tr.selected td a {
   --col: 3fr 1fr 1fr 1fr;
 }
 
+.pr-columns-author {
+  --col: 3fr 1fr 1fr 1fr 1fr;
+}
+
 .pr-grid-header,
 .pr-row {
   display: grid;

@@ -6,10 +6,11 @@ import { getReviewLabel, type PR } from "../lib/types.js";
 
 interface PRRowProps {
   pr: PR;
+  showAuthor?: boolean;
   onClick: () => void;
 }
 
-export function PRRow({ pr, onClick }: PRRowProps) {
+export function PRRow({ pr, showAuthor, onClick }: PRRowProps) {
   const selectedUrl = useAtomValue(selectedUrlAtom);
   const isSelected = pr.url === selectedUrl;
   const rowRef = useRef<HTMLDivElement>(null);
@@ -46,6 +47,7 @@ export function PRRow({ pr, onClick }: PRRowProps) {
         </div>
       </div>
 
+      {showAuthor && <div>{pr.author ?? "--"}</div>}
       <div>{reviewLabel}</div>
 
       <div>

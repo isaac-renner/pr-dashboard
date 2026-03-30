@@ -63,6 +63,7 @@ export interface PR {
   updatedAt: string;
   headRefName: string;
   baseRefName: string;
+  author: string | null;
   repository: Repository;
   checks: string | null;
   mergeable: string | null;

@@ -95,6 +95,7 @@ export class PR extends Schema.Class<PR>("PR")({
   updatedAt: Schema.String,
   headRefName: Schema.String,
   baseRefName: Schema.String,
+  author: Schema.String.pipe(Schema.NullOr),
   repository: Repository,
   checks: Schema.String.pipe(Schema.NullOr),
   mergeable: Schema.String.pipe(Schema.NullOr),
