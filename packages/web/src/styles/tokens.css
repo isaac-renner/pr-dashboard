@@ -785,45 +785,103 @@ tr.selected td a {
   align-items: center;
 }
 
-/* ── Buildkite job breakdown ── */
+/* ── Buildkite pipeline ── */
 
-.bk-jobs {
-  margin-top: calc(var(--line-height) / 2);
-  padding: 0 1ch;
+:root {
+  --bk-green: #30a14e;
+  --bk-red: #d1242f;
+  --bk-yellow: #d4a72c;
+  --bk-blue: #54aeff;
+  --bk-gray: #636c76;
 }
 
-.bk-jobs > * + * {
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bk-green: #3fb950;
+    --bk-red: #f85149;
+    --bk-yellow: #d29922;
+    --bk-blue: #58a6ff;
+    --bk-gray: #8b949e;
+  }
+}
+
+.bk-header {
+  padding: 0 1ch;
+  font-weight: 600;
+}
+
+.bk-pipeline {
+  padding: 0 1ch;
+  margin-top: calc(var(--line-height) / 4);
+}
+
+.bk-pipeline > * + * {
   margin-top: 0;
 }
 
-.bk-job {
+.bk-step {
   display: flex;
   gap: 1ch;
   align-items: baseline;
   padding: calc(var(--line-height) / 4) 0;
-  border-bottom: 1px dotted var(--border-color);
+  text-decoration: none;
+  color: var(--text);
 }
 
-.bk-job:last-child {
-  border-bottom: none;
+a.bk-step:hover .bk-step-label {
+  text-decoration: underline;
 }
 
-.bk-job-state {
-  min-width: 11ch;
+.bk-step-icon {
   flex-shrink: 0;
-  font-weight: 600;
+  width: 2ch;
+  text-align: center;
+  font-weight: 700;
 }
 
-.bk-job-label {
+.bk-step-label {
   word-break: break-word;
 }
 
-.bk-passed .bk-job-state { opacity: 0.5; }
-.bk-failed .bk-job-state { opacity: 1; }
-.bk-running .bk-job-state { opacity: 0.8; }
-.bk-blocked .bk-job-state { opacity: 0.8; }
-.bk-soft-failed .bk-job-state { opacity: 0.6; }
-.bk-pending .bk-job-state { opacity: 0.4; }
+/* State colors */
+.bk-passed .bk-step-icon { color: var(--bk-green); }
+.bk-passed .bk-step-label { opacity: 0.5; }
+
+.bk-failed .bk-step-icon { color: var(--bk-red); }
+.bk-failed .bk-step-label { font-weight: 600; }
+
+.bk-running .bk-step-icon { color: var(--bk-blue); }
+
+.bk-blocked .bk-step-icon { color: var(--bk-yellow); }
+
+.bk-canceled .bk-step-icon { color: var(--bk-gray); }
+.bk-canceled .bk-step-label { opacity: 0.4; text-decoration: line-through; }
+
+.bk-skipped .bk-step-icon { color: var(--bk-gray); }
+.bk-skipped .bk-step-label { opacity: 0.3; }
+
+.bk-soft-failed .bk-step-icon { color: var(--bk-yellow); }
+
+.bk-pending .bk-step-icon { color: var(--bk-gray); opacity: 0.5; }
+.bk-pending .bk-step-label { opacity: 0.4; }
+
+/* Log snippets for failed jobs */
+.bk-logs {
+  padding: 0 1ch;
+  margin-top: calc(var(--line-height) / 2);
+}
+
+.bk-logs > * + * {
+  margin-top: 0;
+}
+
+.bk-log-header {
+  display: flex;
+  gap: 1ch;
+  align-items: baseline;
+  font-weight: 600;
+  padding-top: calc(var(--line-height) / 4);
+}
 
 .bk-log-snippet {
   font-family: var(--font);
@@ -832,7 +890,7 @@ tr.selected td a {
   background: var(--hover);
   border: 1px solid var(--border-color);
   padding: calc(var(--line-height) / 2) 1ch;
-  margin: calc(var(--line-height) / 4) 0;
+  margin: calc(var(--line-height) / 4) 0 0 0;
   overflow-x: auto;
   white-space: pre;
   max-height: calc(var(--line-height) * 15);

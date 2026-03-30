@@ -104,6 +104,9 @@ const refreshCache = Effect.gen(function*() {
     // Enrich with Buildkite build details — on failure, keep PRs without build data
     if (buildkite.enabled) {
       const allPrs = yield* prStore.getAll;
+      const withBkUrl = allPrs.filter((pr) => pr.pipelineUrl && parseBuildkiteUrl(pr.pipelineUrl));
+      yield* Effect.log(`Buildkite: ${withBkUrl.length}/${allPrs.length} PRs have Buildkite URLs`);
+
       const enriched = yield* Effect.forEach(
         allPrs,
         (pr) => {
@@ -112,11 +115,19 @@ const refreshCache = Effect.gen(function*() {
           }
           return buildkite.fetchBuildFromUrl(pr.pipelineUrl).pipe(
             Effect.map((build) => (build ? { ...pr, buildkite: build } : pr)),
-            Effect.catch(() => Effect.succeed(pr)),
+            Effect.catch((err) =>
+              Effect.logWarning(`Buildkite: PR #${pr.number} (${pr.pipelineUrl}): ${String(err)}`).pipe(
+                Effect.map(() => pr),
+              ),
+            ),
           );
         },
         { concurrency: 5 },
       );
+
+      const bkEnriched = enriched.filter((pr) => pr.buildkite != null).length;
+      yield* Effect.log(`Buildkite: enriched ${bkEnriched} PRs with build details`);
+
       // Also enrich reviewRequested PRs
       reviewRequestedCache = yield* Effect.forEach(
         reviewRequestedCache,

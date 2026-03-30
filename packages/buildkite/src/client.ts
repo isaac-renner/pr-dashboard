@@ -18,6 +18,9 @@ export class BuildkiteRequestError {
     readonly message: string,
     readonly status?: number | undefined,
   ) {}
+  toString() {
+    return this.status ? `BuildkiteRequestError(${this.status}): ${this.message}` : `BuildkiteRequestError: ${this.message}`;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -117,7 +120,6 @@ const BUILD_QUERY = `
               uuid
               label
               state
-              url
             }
             ... on JobTypeWait {
               __typename
@@ -129,7 +131,6 @@ const BUILD_QUERY = `
               uuid
               label
               state
-              url
             }
           }
         }
@@ -299,9 +300,13 @@ export const BuildkiteClientLive = Layer.effect(BuildkiteClient)(
         }
 
         if (!response.ok) {
+          const body = yield* Effect.tryPromise({
+            try: () => response.text(),
+            catch: () => new BuildkiteRequestError("could not read body"),
+          });
           return yield* Effect.fail(
             new BuildkiteRequestError(
-              `Buildkite API returned ${response.status}`,
+              `Buildkite API returned ${response.status} for slug "${slug}": ${body.slice(0, 200)}`,
               response.status,
             ),
           );

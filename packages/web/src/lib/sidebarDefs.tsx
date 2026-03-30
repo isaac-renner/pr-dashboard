@@ -89,30 +89,36 @@ export const SIDEBAR_SECTIONS: ReadonlyArray<SidebarSectionDef> = [
       const build = pr.buildkite;
       if (!build) return null;
 
-      function jobStateLabel(state: string, softFailed: boolean): string {
-        if (softFailed) return "soft failed";
-        switch (state) {
-          case "PASSED": return "passed";
-          case "FAILED": return "failed";
-          case "RUNNING": return "running";
-          case "BLOCKED": return "blocked";
-          case "WAITING": return "waiting";
-          case "CANCELED": case "CANCELING": return "canceled";
-          case "SKIPPED": case "NOT_RUN": return "skipped";
-          case "ASSIGNED": case "ACCEPTED": case "SCHEDULED": return "pending";
-          default: return state.toLowerCase();
-        }
-      }
-
-      function jobStateClass(state: string, softFailed: boolean): string {
+      function stateClass(state: string, softFailed: boolean): string {
         if (softFailed) return "bk-soft-failed";
         switch (state) {
-          case "PASSED": return "bk-passed";
+          case "PASSED": case "FINISHED": return "bk-passed";
           case "FAILED": return "bk-failed";
           case "RUNNING": return "bk-running";
           case "BLOCKED": return "bk-blocked";
+          case "CANCELED": case "CANCELING": return "bk-canceled";
+          case "SKIPPED": case "NOT_RUN": return "bk-skipped";
           default: return "bk-pending";
         }
+      }
+
+      function stateIcon(state: string, softFailed: boolean): string {
+        if (softFailed) return "~";
+        switch (state) {
+          case "PASSED": case "FINISHED": return "\u2713";  // checkmark
+          case "FAILED": return "\u2717";                    // cross
+          case "RUNNING": return "\u25B6";                   // play
+          case "BLOCKED": return "\u25A0";                   // filled square
+          case "CANCELED": case "CANCELING": return "\u2013";// en-dash
+          case "SKIPPED": case "NOT_RUN": return "\u2013";
+          default: return "\u00B7";                          // middle dot
+        }
+      }
+
+      /** Strip Buildkite emoji shortcodes like :nix: :github: */
+      function cleanLabel(label: string | null): string {
+        if (!label) return "step";
+        return label.replace(/:[a-z0-9_+-]+:/gi, "").trim() || "step";
       }
 
       function formatDuration(start: string | null, end: string | null): string | null {
@@ -135,52 +141,49 @@ export const SIDEBAR_SECTIONS: ReadonlyArray<SidebarSectionDef> = [
 
       return (
         <>
-          <div className="sidebar-field">
-            <span className="muted">Build</span>
-            <span>
-              <a href={build.url} target="_blank" rel="noreferrer">
-                #{build.number}
-              </a>
-              {build.rebuiltFrom != null && (
-                <span className="muted"> (retry of #{build.rebuiltFrom})</span>
-              )}
-            </span>
+          <div className="bk-header">
+            <a href={build.url} target="_blank" rel="noreferrer">
+              #{build.number}
+            </a>
+            {build.rebuiltFrom != null && (
+              <span className="muted"> retry</span>
+            )}
+            {duration && (
+              <span className="muted"> · {duration}{!build.finishedAt ? "..." : ""}</span>
+            )}
           </div>
-          {duration && (
-            <div className="sidebar-field">
-              <span className="muted">Duration</span>
-              <span>{duration}{!build.finishedAt ? " (running)" : ""}</span>
-            </div>
-          )}
-          {build.failedCount > 0 && (
-            <div className="sidebar-field">
-              <span className="muted">Failed</span>
-              <span>{build.failedCount} job{build.failedCount > 1 ? "s" : ""}</span>
-            </div>
-          )}
-          {build.blockedCount > 0 && (
-            <div className="sidebar-field">
-              <span className="muted">Blocked</span>
-              <span>{build.blockedCount} step{build.blockedCount > 1 ? "s" : ""}</span>
-            </div>
-          )}
           {visibleJobs.length > 0 && (
-            <div className="bk-jobs">
-              {visibleJobs.map((job) => (
-                <React.Fragment key={job.id}>
-                  <div className={`bk-job ${jobStateClass(job.state, job.softFailed)}`}>
-                    <span className="bk-job-state">{jobStateLabel(job.state, job.softFailed)}</span>
-                    {job.url ? (
-                      <a href={job.url} target="_blank" rel="noreferrer" className="bk-job-label">
-                        {job.label || "step"}
-                      </a>
-                    ) : (
-                      <span className="bk-job-label">{job.label || "step"}</span>
-                    )}
+            <div className="bk-pipeline">
+              {visibleJobs.map((job) => {
+                const cls = stateClass(job.state, job.softFailed);
+                const icon = stateIcon(job.state, job.softFailed);
+                const label = cleanLabel(job.label);
+                const content = (
+                  <>
+                    <span className="bk-step-icon">{icon}</span>
+                    <span className="bk-step-label">{label}</span>
+                  </>
+                );
+                return job.url ? (
+                  <a key={job.id} href={job.url} target="_blank" rel="noreferrer" className={`bk-step ${cls}`}>
+                    {content}
+                  </a>
+                ) : (
+                  <div key={job.id} className={`bk-step ${cls}`}>
+                    {content}
                   </div>
-                  {job.logSnippet && (
-                    <pre className="bk-log-snippet">{job.logSnippet}</pre>
-                  )}
+                );
+              })}
+            </div>
+          )}
+          {visibleJobs.some((j) => j.logSnippet) && (
+            <div className="bk-logs">
+              {visibleJobs.filter((j) => j.logSnippet).map((job) => (
+                <React.Fragment key={job.id}>
+                  <div className="bk-log-header bk-failed">
+                    <span className="bk-step-icon">{"\u2717"}</span> {cleanLabel(job.label)}
+                  </div>
+                  <pre className="bk-log-snippet">{job.logSnippet}</pre>
                 </React.Fragment>
               ))}
             </div>
