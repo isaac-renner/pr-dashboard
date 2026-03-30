@@ -865,6 +865,29 @@ a.bk-step:hover .bk-step-label {
 .bk-pending .bk-step-icon { color: var(--bk-gray); opacity: 0.5; }
 .bk-pending .bk-step-label { opacity: 0.4; }
 
+/* Toggle for blocked steps */
+.bk-toggle {
+  padding: calc(var(--line-height) / 4) 1ch;
+}
+
+.bk-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 0;
+  height: auto;
+  font-family: var(--font);
+  font-size: 1rem;
+  text-decoration: underline;
+}
+
+.bk-toggle-btn:hover {
+  opacity: 1;
+  text-decoration: none;
+}
+
 /* Log snippets for failed jobs */
 .bk-logs {
   padding: 0 1ch;
