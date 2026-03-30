@@ -56,6 +56,7 @@ export type MergeableState = typeof MergeableState.Type;
 
 export class BuildkiteJob extends Schema.Class<BuildkiteJob>("BuildkiteJob")({
   id: Schema.String,
+  graphqlId: Schema.String.pipe(Schema.NullOr),
   label: Schema.String.pipe(Schema.NullOr),
   state: Schema.String,
   url: Schema.String.pipe(Schema.NullOr),
@@ -64,15 +65,25 @@ export class BuildkiteJob extends Schema.Class<BuildkiteJob>("BuildkiteJob")({
   softFailed: Schema.Boolean,
   type: Schema.Literals(["command", "block", "wait", "trigger"] as const),
   logSnippet: Schema.String.pipe(Schema.NullOr),
+  exitStatus: Schema.String.pipe(Schema.NullOr),
+  retried: Schema.Boolean,
+  retriesCount: Schema.Number.pipe(Schema.NullOr),
+  parallelGroupIndex: Schema.Number.pipe(Schema.NullOr),
+  parallelGroupTotal: Schema.Number.pipe(Schema.NullOr),
+  isUnblockable: Schema.Boolean.pipe(Schema.NullOr),
 }) {}
 
 export class BuildkiteBuild extends Schema.Class<BuildkiteBuild>(
   "BuildkiteBuild",
 )({
+  graphqlId: Schema.String,
   number: Schema.Number,
   state: Schema.String,
   url: Schema.String,
   message: Schema.String.pipe(Schema.NullOr),
+  branch: Schema.String,
+  commit: Schema.String,
+  pipelineName: Schema.String.pipe(Schema.NullOr),
   createdAt: Schema.String,
   startedAt: Schema.String.pipe(Schema.NullOr),
   finishedAt: Schema.String.pipe(Schema.NullOr),

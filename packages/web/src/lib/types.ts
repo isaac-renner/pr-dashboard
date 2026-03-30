@@ -30,6 +30,7 @@ export interface SessionRef {
 
 export interface BuildkiteJob {
   id: string;
+  graphqlId: string | null;
   label: string | null;
   state: string;
   url: string | null;
@@ -38,13 +39,23 @@ export interface BuildkiteJob {
   softFailed: boolean;
   type: "command" | "block" | "wait" | "trigger";
   logSnippet: string | null;
+  exitStatus: string | null;
+  retried: boolean;
+  retriesCount: number | null;
+  parallelGroupIndex: number | null;
+  parallelGroupTotal: number | null;
+  isUnblockable: boolean | null;
 }
 
 export interface BuildkiteBuild {
+  graphqlId: string;
   number: number;
   state: string;
   url: string;
   message: string | null;
+  branch: string;
+  commit: string;
+  pipelineName: string | null;
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;

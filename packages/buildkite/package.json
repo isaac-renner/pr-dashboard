@@ -5,7 +5,20 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "codegen": "graphql-codegen --config codegen.ts"
+  },
   "peerDependencies": {
     "effect": "^4.0.0-beta.0"
+  },
+  "dependencies": {
+    "@graphql-typed-document-node/core": "^3.2.0"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^5.0.0",
+    "@graphql-codegen/client-preset": "^5.2.4",
+    "@graphql-codegen/typescript": "^4.0.0",
+    "@graphql-codegen/typescript-operations": "^4.0.0",
+    "graphql": "^16.0.0"
   }
 }

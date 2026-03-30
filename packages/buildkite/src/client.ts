@@ -1,12 +1,15 @@
 /**
- * BuildkiteClient — Effect service for fetching build details from
- * Buildkite's GraphQL API.
+ * BuildkiteClient — Effect service for fetching build details and
+ * executing mutations against Buildkite's GraphQL API.
  *
- * Parses build URLs already extracted from GitHub status checks and
- * fetches the full job-level breakdown from Buildkite.
+ * Uses codegen-generated typed document nodes for type safety.
  */
 
+import type { TypedDocumentNode } from "@graphql-typed-document-node/core";
 import { Config, Duration, Effect, Layer, Schedule, ServiceMap } from "effect";
+import { print } from "graphql";
+import type { BuildDetailsQuery } from "./generated/graphql.js";
+import { BuildDetails, RebuildBuild, RetryJob, UnblockStep } from "./queries.js";
 
 // -----------------------------------------------------------------------------
 // Errors
@@ -19,7 +22,9 @@ export class BuildkiteRequestError {
     readonly status?: number | undefined,
   ) {}
   toString() {
-    return this.status ? `BuildkiteRequestError(${this.status}): ${this.message}` : `BuildkiteRequestError: ${this.message}`;
+    return this.status
+      ? `BuildkiteRequestError(${this.status}): ${this.message}`
+      : `BuildkiteRequestError: ${this.message}`;
   }
 }
 
@@ -29,6 +34,8 @@ export class BuildkiteRequestError {
 
 export interface BuildkiteJob {
   readonly id: string;
+  /** The GraphQL node ID — needed for mutations (unblock, retry). */
+  readonly graphqlId: string | null;
   readonly label: string | null;
   readonly state: string;
   readonly url: string | null;
@@ -37,13 +44,25 @@ export interface BuildkiteJob {
   readonly softFailed: boolean;
   readonly type: "command" | "block" | "wait" | "trigger";
   readonly logSnippet: string | null;
+  readonly exitStatus: string | null;
+  readonly retried: boolean;
+  readonly retriesCount: number | null;
+  readonly parallelGroupIndex: number | null;
+  readonly parallelGroupTotal: number | null;
+  /** Whether a block step can be unblocked right now. */
+  readonly isUnblockable: boolean | null;
 }
 
 export interface BuildkiteBuild {
+  /** The GraphQL node ID — needed for rebuild mutation. */
+  readonly graphqlId: string;
   readonly number: number;
   readonly state: string;
   readonly url: string;
   readonly message: string | null;
+  readonly branch: string;
+  readonly commit: string;
+  readonly pipelineName: string | null;
   readonly createdAt: string;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
@@ -86,94 +105,6 @@ export function parseBuildkiteUrl(url: string): BuildkiteUrlParts | null {
 }
 
 // -----------------------------------------------------------------------------
-// GraphQL query
-// -----------------------------------------------------------------------------
-
-const BUILD_QUERY = `
-  query BuildDetails($slug: ID!) {
-    build(slug: $slug) {
-      number
-      state
-      url
-      message
-      createdAt
-      startedAt
-      finishedAt
-      rebuiltFrom {
-        number
-      }
-      jobs(first: 50) {
-        edges {
-          node {
-            ... on JobTypeCommand {
-              __typename
-              uuid
-              label
-              state
-              url
-              startedAt
-              finishedAt
-              softFailed
-            }
-            ... on JobTypeBlock {
-              __typename
-              uuid
-              label
-              state
-            }
-            ... on JobTypeWait {
-              __typename
-              uuid
-              state
-            }
-            ... on JobTypeTrigger {
-              __typename
-              uuid
-              label
-              state
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-// -----------------------------------------------------------------------------
-// GraphQL response shape
-// -----------------------------------------------------------------------------
-
-interface GQLBuildResponse {
-  data?: {
-    build: {
-      number: number;
-      state: string;
-      url: string;
-      message: string | null;
-      createdAt: string;
-      startedAt: string | null;
-      finishedAt: string | null;
-      rebuiltFrom: { number: number } | null;
-      jobs: {
-        edges: Array<{
-          node: {
-            __typename: string;
-            uuid: string;
-            label?: string | null;
-            state: string;
-            url?: string | null;
-            startedAt?: string | null;
-            finishedAt?: string | null;
-            softFailed?: boolean;
-          };
-        }>;
-      };
-    } | null;
-  };
-  errors?: Array<{ message: string }>;
-}
-
-// -----------------------------------------------------------------------------
 // Service interface
 // -----------------------------------------------------------------------------
 
@@ -198,6 +129,27 @@ export interface BuildkiteClientShape {
   readonly fetchBuildFromUrl: (
     url: string,
   ) => Effect.Effect<BuildkiteBuild | null, BuildkiteRequestError>;
+
+  /**
+   * Unblock a block step by its GraphQL node ID.
+   */
+  readonly unblockStep: (
+    id: string,
+  ) => Effect.Effect<{ state: string }, BuildkiteRequestError>;
+
+  /**
+   * Retry a failed command job by its GraphQL node ID.
+   */
+  readonly retryJob: (
+    id: string,
+  ) => Effect.Effect<{ id: string; state: string }, BuildkiteRequestError>;
+
+  /**
+   * Rebuild a build by its GraphQL node ID.
+   */
+  readonly rebuildBuild: (
+    id: string,
+  ) => Effect.Effect<{ number: number; url: string; state: string }, BuildkiteRequestError>;
 }
 
 export class BuildkiteClient extends ServiceMap.Service<
@@ -215,23 +167,104 @@ export const BuildkiteClientLive = Layer.effect(BuildkiteClient)(
       Config.withDefault(""),
     );
 
+    const noop: BuildkiteClientShape = {
+      enabled: false,
+      fetchBuild: () => Effect.succeed(null),
+      fetchBuildFromUrl: () => Effect.succeed(null),
+      unblockStep: () => Effect.fail(new BuildkiteRequestError("Buildkite disabled")),
+      retryJob: () => Effect.fail(new BuildkiteRequestError("Buildkite disabled")),
+      rebuildBuild: () => Effect.fail(new BuildkiteRequestError("Buildkite disabled")),
+    };
+
     if (!tokenStr) {
       yield* Effect.log("Buildkite integration disabled (no BUILDKITE_TOKEN)");
-      return {
-        enabled: false,
-        fetchBuild: () => Effect.succeed(null),
-        fetchBuildFromUrl: () => Effect.succeed(null),
-      };
+      return noop;
     }
 
     yield* Effect.log("Buildkite integration enabled");
 
+    // --- Shared GraphQL executor ---
+
+    function execute<TResult, TVariables extends Record<string, unknown>>(
+      document: TypedDocumentNode<TResult, TVariables>,
+      variables: TVariables,
+    ): Effect.Effect<TResult, BuildkiteRequestError> {
+      const doRequest = Effect.gen(function*() {
+        const query = print(document);
+        const response = yield* Effect.tryPromise({
+          try: () =>
+            fetch("https://graphql.buildkite.com/v1", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${tokenStr}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ query, variables }),
+            }),
+          catch: (error) =>
+            new BuildkiteRequestError(`Network error: ${error}`),
+        });
+
+        if (response.status === 429) {
+          return yield* Effect.fail(
+            new BuildkiteRequestError("Rate limited", 429),
+          );
+        }
+
+        if (!response.ok) {
+          const body = yield* Effect.tryPromise({
+            try: () => response.text(),
+            catch: () => new BuildkiteRequestError("could not read body"),
+          });
+          return yield* Effect.fail(
+            new BuildkiteRequestError(
+              `Buildkite API returned ${response.status}: ${body.slice(0, 200)}`,
+              response.status,
+            ),
+          );
+        }
+
+        const json = yield* Effect.tryPromise({
+          try: () =>
+            response.json() as Promise<{
+              data?: TResult;
+              errors?: Array<{ message: string }>;
+            }>,
+          catch: (error) =>
+            new BuildkiteRequestError(`Failed to parse response: ${error}`),
+        });
+
+        if (json.errors?.length) {
+          return yield* Effect.fail(
+            new BuildkiteRequestError(
+              json.errors.map((e) => e.message).join("; "),
+            ),
+          );
+        }
+
+        if (!json.data) {
+          return yield* Effect.fail(
+            new BuildkiteRequestError("No data in response"),
+          );
+        }
+
+        return json.data;
+      }).pipe(Effect.withSpan("buildkite.execute"));
+
+      return doRequest.pipe(
+        Effect.retry({
+          schedule: Schedule.exponential(Duration.seconds(5)).pipe(
+            Schedule.both(Schedule.recurs(3)),
+          ),
+          while: (err) => err.status === 429,
+        }),
+      );
+    }
+
+    // --- Log fetching (REST — not available via GraphQL) ---
+
     const LOG_TAIL_LINES = 50;
 
-    /**
-     * Fetch the raw log for a job via the REST API and return the last N lines.
-     * Returns null if the log can't be fetched (non-fatal).
-     */
     function fetchJobLog(
       org: string,
       pipeline: string,
@@ -261,7 +294,6 @@ export const BuildkiteClientLive = Layer.effect(BuildkiteClient)(
         const content = json?.content;
         if (!content) return null;
 
-        // Strip ANSI escape codes and take last N lines
         const clean = content.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
         const lines = clean.split("\n");
         const tail = lines.slice(-LOG_TAIL_LINES).join("\n").trim();
@@ -272,137 +304,164 @@ export const BuildkiteClientLive = Layer.effect(BuildkiteClient)(
       );
     }
 
-    function executeQuery(
+    // --- Transform GraphQL response to our domain types ---
+
+    type GQLBuildNode = NonNullable<BuildDetailsQuery["build"]>;
+    type GQLJobEdge = NonNullable<NonNullable<GQLBuildNode["jobs"]>["edges"]>[number];
+
+    function transformBuild(
+      build: GQLBuildNode,
+      jobs: ReadonlyArray<BuildkiteJob>,
+    ): BuildkiteBuild {
+      return {
+        graphqlId: build.id,
+        number: build.number,
+        state: build.state,
+        url: build.url,
+        message: build.message ?? null,
+        branch: build.branch,
+        commit: build.commit,
+        pipelineName: build.pipeline.name ?? null,
+        createdAt: build.createdAt ?? "",
+        startedAt: build.startedAt ?? null,
+        finishedAt: build.finishedAt ?? null,
+        rebuiltFrom: build.rebuiltFrom?.number ?? null,
+        jobs,
+        blockedCount: jobs.filter((j) => j.type === "block" && j.state === "BLOCKED").length,
+        failedCount: jobs.filter((j) => j.type === "command" && j.state === "FAILED" && !j.softFailed).length,
+      };
+    }
+
+    function transformJob(
+      edge: GQLJobEdge | null,
+    ): { job: Omit<BuildkiteJob, "logSnippet">; isFailed: boolean } {
+      const node = edge?.node;
+      if (!node) {
+        return {
+          job: {
+            id: "", graphqlId: null, label: null, state: "UNKNOWN",
+            url: null, startedAt: null, finishedAt: null, softFailed: false,
+            type: "wait", exitStatus: null, retried: false, retriesCount: null,
+            parallelGroupIndex: null, parallelGroupTotal: null, isUnblockable: null,
+          },
+          isFailed: false,
+        };
+      }
+
+      const typename = node.__typename;
+      const isCommand = typename === "JobTypeCommand";
+      const isBlock = typename === "JobTypeBlock";
+
+      // Normalize state: Buildkite GQL uses FINISHED for completed jobs.
+      // Derive PASSED/FAILED from exitStatus for command jobs so the UI
+      // can use simple string comparisons.
+      const rawState = String(node.state);
+      let normalizedState = rawState;
+      if (isCommand && rawState === "FINISHED") {
+        const exit = (node as { exitStatus?: string | null }).exitStatus;
+        const soft = (node as { softFailed: boolean }).softFailed;
+        if (soft) normalizedState = "SOFT_FAILED";
+        else if (exit != null && exit !== "0") normalizedState = "FAILED";
+        else normalizedState = "PASSED";
+      }
+
+      const base = {
+        id: "uuid" in node ? node.uuid : "",
+        graphqlId: "id" in node ? (node as { id: string }).id : null,
+        label: "label" in node ? (node.label ?? null) : null,
+        state: normalizedState,
+        url: isCommand ? (node as { url: string }).url : null,
+        startedAt: isCommand ? ((node as { startedAt?: string | null }).startedAt ?? null) : null,
+        finishedAt: isCommand ? ((node as { finishedAt?: string | null }).finishedAt ?? null) : null,
+        softFailed: isCommand ? ((node as { softFailed: boolean }).softFailed) : false,
+        type: isCommand ? "command" as const
+          : isBlock ? "block" as const
+          : typename === "JobTypeTrigger" ? "trigger" as const
+          : "wait" as const,
+        exitStatus: isCommand ? ((node as { exitStatus?: string | null }).exitStatus ?? null) : null,
+        retried: isCommand ? ((node as { retried: boolean }).retried) : false,
+        retriesCount: isCommand ? ((node as { retriesCount?: number | null }).retriesCount ?? null) : null,
+        parallelGroupIndex: isCommand ? ((node as { parallelGroupIndex?: number | null }).parallelGroupIndex ?? null) : null,
+        parallelGroupTotal: isCommand ? ((node as { parallelGroupTotal?: number | null }).parallelGroupTotal ?? null) : null,
+        isUnblockable: isBlock ? ((node as { isUnblockable?: boolean | null }).isUnblockable ?? null) : null,
+      };
+
+      const isFailed = normalizedState === "FAILED";
+      return { job: base, isFailed };
+    }
+
+    // --- Build fetching ---
+
+    function fetchBuildBySlug(
       slug: string,
     ): Effect.Effect<BuildkiteBuild | null, BuildkiteRequestError> {
-      const doRequest = Effect.gen(function*() {
-        const response = yield* Effect.tryPromise({
-          try: () =>
-            fetch("https://graphql.buildkite.com/v1", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${tokenStr}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                query: BUILD_QUERY,
-                variables: { slug },
-              }),
-            }),
-          catch: (error) =>
-            new BuildkiteRequestError(`Network error: ${error}`),
-        });
-
-        if (response.status === 429) {
-          return yield* Effect.fail(
-            new BuildkiteRequestError("Rate limited", 429),
-          );
-        }
-
-        if (!response.ok) {
-          const body = yield* Effect.tryPromise({
-            try: () => response.text(),
-            catch: () => new BuildkiteRequestError("could not read body"),
-          });
-          return yield* Effect.fail(
-            new BuildkiteRequestError(
-              `Buildkite API returned ${response.status} for slug "${slug}": ${body.slice(0, 200)}`,
-              response.status,
-            ),
-          );
-        }
-
-        const json = yield* Effect.tryPromise({
-          try: () => response.json() as Promise<GQLBuildResponse>,
-          catch: (error) =>
-            new BuildkiteRequestError(`Failed to parse response: ${error}`),
-        });
-
-        if (json.errors?.length) {
-          return yield* Effect.fail(
-            new BuildkiteRequestError(
-              json.errors.map((e) => e.message).join("; "),
-            ),
-          );
-        }
-
-        const build = json.data?.build;
+      return Effect.gen(function*() {
+        const data = yield* execute(BuildDetails, { slug });
+        const build = data.build;
         if (!build) return null;
 
-        // Parse the slug to get org/pipeline for REST API calls
         const slugParts = slug.split("/");
         const slugOrg = slugParts[0] ?? "";
         const slugPipeline = slugParts[1] ?? "";
 
+        const edges = build.jobs?.edges ?? [];
         const jobs: BuildkiteJob[] = yield* Effect.forEach(
-          build.jobs.edges,
-          (edge) => Effect.gen(function*() {
-            const node = edge.node;
-            const typename = node.__typename;
-            const isFailed = typename === "JobTypeCommand"
-              && node.state === "FAILED"
-              && !(node.softFailed ?? false);
-
-            // Fetch log snippet for failed command jobs
-            const logSnippet = isFailed
-              ? yield* fetchJobLog(slugOrg, slugPipeline, build.number, node.uuid)
-              : null;
-
-            return {
-              id: node.uuid,
-              label: node.label ?? null,
-              state: node.state,
-              url: node.url ?? null,
-              startedAt: node.startedAt ?? null,
-              finishedAt: node.finishedAt ?? null,
-              softFailed: node.softFailed ?? false,
-              type: typename === "JobTypeCommand" ? "command" as const
-                : typename === "JobTypeBlock" ? "block" as const
-                : typename === "JobTypeTrigger" ? "trigger" as const
-                : "wait" as const,
-              logSnippet,
-            };
-          }),
+          edges,
+          (edge) =>
+            Effect.gen(function*() {
+              const { job, isFailed } = transformJob(edge);
+              const logSnippet = isFailed
+                ? yield* fetchJobLog(slugOrg, slugPipeline, build.number, job.id)
+                : null;
+              return { ...job, logSnippet };
+            }),
           { concurrency: 3 },
         );
 
-        return {
-          number: build.number,
-          state: build.state,
-          url: build.url,
-          message: build.message,
-          createdAt: build.createdAt,
-          startedAt: build.startedAt,
-          finishedAt: build.finishedAt,
-          rebuiltFrom: build.rebuiltFrom?.number ?? null,
-          jobs,
-          blockedCount: jobs.filter((j) => j.type === "block" && j.state === "BLOCKED").length,
-          failedCount: jobs.filter((j) => j.type === "command" && j.state === "FAILED" && !j.softFailed).length,
-        };
+        return transformBuild(build, jobs);
       }).pipe(Effect.withSpan("buildkite.fetchBuild"));
-
-      // Retry on rate limit: exponential backoff, max 3 attempts
-      return doRequest.pipe(
-        Effect.retry({
-          schedule: Schedule.exponential(Duration.seconds(5)).pipe(
-            Schedule.both(Schedule.recurs(3)),
-          ),
-          while: (err) => err.status === 429,
-        }),
-      );
     }
+
+    // --- Mutations ---
 
     return {
       enabled: true,
 
       fetchBuild: (org, pipeline, buildNumber) =>
-        executeQuery(`${org}/${pipeline}/${buildNumber}`),
+        fetchBuildBySlug(`${org}/${pipeline}/${buildNumber}`),
 
       fetchBuildFromUrl: (url) => {
         const parts = parseBuildkiteUrl(url);
         if (!parts) return Effect.succeed(null);
-        return executeQuery(`${parts.org}/${parts.pipeline}/${parts.buildNumber}`);
+        return fetchBuildBySlug(`${parts.org}/${parts.pipeline}/${parts.buildNumber}`);
       },
+
+      unblockStep: (id) =>
+        execute(UnblockStep, { input: { id } }).pipe(
+          Effect.map((data) => ({
+            state: data.jobTypeBlockUnblock?.jobTypeBlock.state ?? "UNKNOWN",
+          })),
+          Effect.withSpan("buildkite.unblockStep"),
+        ),
+
+      retryJob: (id) =>
+        execute(RetryJob, { input: { id } }).pipe(
+          Effect.map((data) => ({
+            id: data.jobTypeCommandRetry?.jobTypeCommand.uuid ?? "",
+            state: data.jobTypeCommandRetry?.jobTypeCommand.state ?? "UNKNOWN",
+          })),
+          Effect.withSpan("buildkite.retryJob"),
+        ),
+
+      rebuildBuild: (id) =>
+        execute(RebuildBuild, { input: { id } }).pipe(
+          Effect.map((data) => ({
+            number: data.buildRebuild?.build.number ?? 0,
+            url: data.buildRebuild?.build.url ?? "",
+            state: data.buildRebuild?.build.state ?? "UNKNOWN",
+          })),
+          Effect.withSpan("buildkite.rebuildBuild"),
+        ),
     };
   }),
 );
